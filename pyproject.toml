@@ -5,7 +5,7 @@ description = "Resume generation where every claim cites verified evidence, with
 requires-python = ">=3.11"
 dependencies = [
   "pydantic>=2.13.5",
-  "pydantic-settings>=2.2",
+  "pydantic-settings>=2.15.0",
   "sqlalchemy>=2.0",
   "alembic>=1.14",
   "psycopg[binary]>=3.2",
