@@ -4,6 +4,10 @@ services:
     env_file: [.env]
     environment:
       APP_ENV: local
+      # Inside the container: listen on all interfaces (the port mapping is
+      # the boundary), and reach the database by its service name.
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql+psycopg://app:app@db:5432/app
     ports: ["8000:8000"]
     depends_on:
       db:

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
 
 import yaml
@@ -27,7 +28,7 @@ from sqlalchemy.orm import Session
 
 from grounded.evidence.enums import VerificationMethod, VerificationStatus
 from grounded.evidence.models import Evidence, Project, Role
-from grounded.evidence.schema import EvidenceFile, EvidenceIn
+from grounded.evidence.schema import EvidenceFile, EvidenceIn, ProjectIn, RoleIn
 
 
 class EvidenceError(ValueError):
@@ -55,19 +56,6 @@ def read_file(path: Path) -> EvidenceFile:
     return EvidenceFile.model_validate(raw)
 
 
-def _check_references(session: Session, data: EvidenceFile) -> None:
-    roles = {r.id for r in data.roles} | set(session.scalars(select(Role.id)))
-    projects = {p.id for p in data.projects} | set(session.scalars(select(Project.id)))
-    for p in data.projects:
-        if p.role and p.role not in roles:
-            raise EvidenceError(f"project '{p.id}' refers to unknown role '{p.role}'")
-    for e in data.evidence:
-        if e.project and e.project not in projects:
-            raise EvidenceError(f"evidence '{e.id}' refers to unknown project '{e.project}'")
-        if e.role and e.role not in roles:
-            raise EvidenceError(f"evidence '{e.id}' refers to unknown role '{e.role}'")
-
-
 def _apply_verification(record: Evidence, item: EvidenceIn, now: datetime) -> bool:
     if item.verification is None:
         return False
@@ -91,52 +79,91 @@ def _write_fact(record: Evidence, item: EvidenceIn) -> None:
     record.content_hash = item.content_hash()
 
 
+class Outcome(StrEnum):
+    CREATED = "created"
+    REVISED = "revised"
+    UNCHANGED = "unchanged"
+
+
+def upsert_role(session: Session, r: RoleIn) -> Role:
+    role = session.get(Role, r.id) or Role(id=r.id)
+    role.title, role.organisation = r.title, r.organisation
+    role.start_month, role.end_month = r.start, r.end
+    session.add(role)
+    return role
+
+
+def upsert_project(session: Session, p: ProjectIn) -> Project:
+    if p.role and session.get(Role, p.role) is None:
+        raise EvidenceError(f"project '{p.id}' refers to unknown role '{p.role}'")
+    project = session.get(Project, p.id) or Project(id=p.id)
+    project.name, project.role_id, project.summary = p.name, p.role, p.summary
+    project.repo_url = str(p.repo_url) if p.repo_url else None
+    session.add(project)
+    return project
+
+
+def upsert_evidence(
+    session: Session, item: EvidenceIn, now: datetime | None = None
+) -> tuple[Evidence, Outcome, bool]:
+    """The single write path for a fact — the loader and the API both use it.
+
+    Returns the record, what happened to it, and whether this write
+    verified it. Does not commit: the caller decides the transaction.
+    """
+    moment = now or datetime.now(UTC)
+    if item.project and session.get(Project, item.project) is None:
+        raise EvidenceError(f"evidence '{item.id}' refers to unknown project '{item.project}'")
+    if item.role and session.get(Role, item.role) is None:
+        raise EvidenceError(f"evidence '{item.id}' refers to unknown role '{item.role}'")
+
+    record = session.get(Evidence, item.id)
+    if record is None:
+        record = Evidence(id=item.id, revision=1)
+        _write_fact(record, item)
+        record.verification_status = VerificationStatus.UNVERIFIED
+        session.add(record)
+        return record, Outcome.CREATED, _apply_verification(record, item, moment)
+
+    if record.content_hash != item.content_hash():
+        _write_fact(record, item)
+        record.revision += 1
+        # The fact changed: whatever verified the old one does not verify
+        # this one. A verification block in the same write may re-verify
+        # it, and that is recorded as a fresh verification.
+        record.verification_status = VerificationStatus.UNVERIFIED
+        record.verification_method = record.verified_by = None
+        record.verified_at = None
+        return record, Outcome.REVISED, _apply_verification(record, item, moment)
+
+    record.skills = list(item.skills)  # tags are not part of the fact
+    verified = not record.citable and _apply_verification(record, item, moment)
+    return record, Outcome.UNCHANGED, verified
+
+
 def load(session: Session, data: EvidenceFile, now: datetime | None = None) -> LoadReport:
     """Upsert a validated file. Commits once, at the end, or not at all."""
     moment = now or datetime.now(UTC)
-    _check_references(session, data)
     report = LoadReport()
-
-    for r in data.roles:
-        role = session.get(Role, r.id) or Role(id=r.id)
-        role.title, role.organisation = r.title, r.organisation
-        role.start_month, role.end_month = r.start, r.end
-        session.add(role)
-    for p in data.projects:
-        project = session.get(Project, p.id) or Project(id=p.id)
-        project.name, project.role_id, project.summary = p.name, p.role, p.summary
-        project.repo_url = str(p.repo_url) if p.repo_url else None
-        session.add(project)
-    session.flush()
-
-    for item in data.evidence:
-        record = session.get(Evidence, item.id)
-        if record is None:
-            record = Evidence(id=item.id, revision=1)
-            _write_fact(record, item)
-            record.verification_status = VerificationStatus.UNVERIFIED
-            session.add(record)
-            report.created.append(item.id)
-            if _apply_verification(record, item, moment):
-                report.verified.append(item.id)
-        elif record.content_hash != item.content_hash():
-            _write_fact(record, item)
-            record.revision += 1
-            # The fact changed: whatever verified the old one does not
-            # verify this one. The file's own verification block may
-            # re-verify it, and that is recorded as a fresh verification.
-            record.verification_status = VerificationStatus.UNVERIFIED
-            record.verification_method = record.verified_by = None
-            record.verified_at = None
-            report.revised.append(item.id)
-            if _apply_verification(record, item, moment):
-                report.verified.append(item.id)
-        else:
-            record.skills = list(item.skills)  # tags are not part of the fact
-            report.unchanged.append(item.id)
-            if not record.citable and _apply_verification(record, item, moment):
-                report.verified.append(item.id)
-
+    try:
+        for r in data.roles:
+            upsert_role(session, r)
+        session.flush()
+        for p in data.projects:
+            upsert_project(session, p)
+        session.flush()
+        for item in data.evidence:
+            record, outcome, verified = upsert_evidence(session, item, moment)
+            {
+                Outcome.CREATED: report.created,
+                Outcome.REVISED: report.revised,
+                Outcome.UNCHANGED: report.unchanged,
+            }[outcome].append(record.id)
+            if verified:
+                report.verified.append(record.id)
+    except Exception:
+        session.rollback()
+        raise
     session.commit()
     return report
 

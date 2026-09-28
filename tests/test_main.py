@@ -6,6 +6,7 @@ import json
 import logging
 
 import pytest
+import uvicorn
 
 from grounded.__main__ import main
 from grounded.logging import JsonFormatter, configure_logging
@@ -36,13 +37,22 @@ def test_formatter_includes_exception() -> None:
     assert "ValueError: boom" in payload["exc"]
 
 
-def test_main_logs_startup(
+def test_main_logs_startup_and_serves(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setenv("APP_ENV", "ci")
+    monkeypatch.setenv("DATABASE_URL", "sqlite://")
+
     from grounded.config import get_settings
 
+    served: dict[str, object] = {}
+    monkeypatch.setattr(uvicorn, "run", lambda app, **kw: served.update(app=app, **kw))
     get_settings.cache_clear()
-    main()
+    try:
+        main()
+    finally:
+        get_settings.cache_clear()
     line = capsys.readouterr().out.strip().splitlines()[-1]
     assert json.loads(line)["msg"] == "started in ci"
+    assert served["host"] == "127.0.0.1"  # loopback unless told otherwise
+    assert served["port"] == 8000

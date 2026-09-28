@@ -19,6 +19,12 @@ class Settings(BaseSettings):
 
     app_env: Literal["local", "ci", "staging", "prod"] = "local"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    host: str = "127.0.0.1"
+    """Loopback by default: the admin has no authentication until step 60, so
+    it must not be reachable from the network. The container sets 0.0.0.0,
+    where the port mapping is the boundary."""
+    port: int = 8000
+
     database_url: str = "postgresql+psycopg://app:app@localhost:5433/app"
     """The local compose database. Port 5433, not 5432, so this stack and the
     lakehouse's can run side by side; the driver is named so SQLAlchemy never

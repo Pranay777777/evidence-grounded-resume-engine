@@ -10,3 +10,4 @@ accident.
 |---|---|
 | [001](0001-grounding-constraint.md) | The grounding constraint: unsupported claims are rejected, never smoothed over |
 | [002](0002-evidence-model.md) | Atomic, versioned evidence records; a changed fact is an unverified fact |
+| [003](0003-evidence-api-and-admin.md) | One write path for evidence, a local CSRF-protected admin, no deletes |
