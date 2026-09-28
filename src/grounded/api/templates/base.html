@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Evidence{% endblock %} · evidence admin</title>
+<style>
+  :root { --ink:#1d2330; --muted:#5b6475; --line:#dde2ea; --bg:#f7f8fa; --ok:#1f7a4d; --warn:#9a6700; --bad:#b42318; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color:var(--ink); background:var(--bg); }
+  header { background:#fff; border-bottom:1px solid var(--line); padding:14px 28px; display:flex; gap:24px; align-items:baseline; }
+  header a { color:var(--ink); text-decoration:none; font-weight:600; }
+  main { max-width:1100px; margin:24px auto; padding:0 28px; }
+  table { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); }
+  th, td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  code { font-size:13px; }
+  .pill { display:inline-block; padding:1px 8px; border-radius:10px; font-size:12px; font-weight:600; }
+  .verified { background:#e3f4ea; color:var(--ok); } .unverified { background:#fff4d6; color:var(--warn); } .rejected { background:#fde8e6; color:var(--bad); }
+  .card { background:#fff; border:1px solid var(--line); border-radius:6px; padding:18px 20px; margin-bottom:18px; }
+  label { display:block; font-size:13px; color:var(--muted); margin:10px 0 3px; }
+  input, select, textarea { width:100%; padding:7px 9px; border:1px solid var(--line); border-radius:4px; font:inherit; }
+  textarea { min-height:70px; }
+  .row { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:0 16px; }
+  button { margin-top:14px; padding:8px 16px; border:0; border-radius:4px; background:var(--ink); color:#fff; font:inherit; cursor:pointer; }
+  button.secondary { background:#fff; color:var(--bad); border:1px solid var(--bad); }
+  .errors { background:#fde8e6; color:var(--bad); padding:10px 14px; border-radius:4px; }
+  .muted { color:var(--muted); font-size:13px; }
+  nav.filters a { margin-right:14px; }
+</style>
+</head>
+<body>
+<header><a href="/admin">Evidence admin</a><a href="/admin/evidence/new">+ New record</a><a href="/docs">API</a></header>
+<main>{% block content %}{% endblock %}</main>
+</body>
+</html>

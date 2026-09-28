@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Records{% endblock %}
+{% block content %}
+<p class="muted">Only <strong>verified</strong> records can be cited by the generator. Editing a statement makes it unverified again (ADR-002).</p>
+<nav class="filters">
+  <a href="/admin">All</a>
+  {% for s in ["unverified", "verified", "rejected"] %}
+    <a href="/admin?status={{ s }}">{{ s }} ({{ counts.get(s, 0) }})</a>
+  {% endfor %}
+</nav>
+<br>
+<table>
+  <tr><th>Record</th><th>Kind</th><th>Statement</th><th>Status</th><th>Rev</th></tr>
+  {% for r in records %}
+  <tr>
+    <td><a href="/admin/evidence/{{ r.id }}"><code>{{ r.id }}</code></a></td>
+    <td>{{ r.kind }}</td>
+    <td>{{ r.statement }}</td>
+    <td><span class="pill {{ r.verification_status }}">{{ r.verification_status }}</span></td>
+    <td>{{ r.revision }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="5" class="muted">No records{% if status %} with status {{ status }}{% endif %}. Load a file with <code>python -m grounded.evidence load</code> or add one.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

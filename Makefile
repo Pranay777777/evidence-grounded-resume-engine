@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install up down test lint format typecheck security migrate evidence test-integration eval clean
+.PHONY: help install up down test lint format typecheck security serve migrate evidence test-integration eval clean
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -32,6 +32,9 @@ typecheck:  ## Run mypy in strict mode
 security:  ## Secret scan over full history plus dependency audit
 	gitleaks git --config .gitleaks.toml --redact --no-banner --log-opts="--all" .
 	pip-audit --strict
+
+serve:  ## Run the API and admin at http://127.0.0.1:8000 (loopback only until auth lands)
+	python -m grounded
 
 migrate:  ## Bring the evidence store to the latest schema
 	python -m grounded.migrate

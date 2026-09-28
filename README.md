@@ -70,7 +70,7 @@ Filled in as each component ships — measured numbers only.
 
 - [x] Repository, CI gates, and the grounding constraint (ADR-001)
 - [x] Evidence store — Postgres + pgvector, atomic versioned records ([ADR-002](docs/adr/0002-evidence-model.md)); real records loading in progress
-- [ ] Evidence API and admin UI for adding and verifying records
+- [x] Evidence API and admin UI for adding and verifying records ([ADR-003](docs/adr/0003-evidence-api-and-admin.md))
 - [ ] Embedding and chunking pipeline, with the strategy documented
 - [ ] Hybrid retrieval with reranking, and a published recall@k ablation
 - [ ] Structured generation with mandatory `evidence_ids`
@@ -88,6 +88,8 @@ Filled in as each component ships — measured numbers only.
 make help                 # every target
 make install              # dev extras and git hooks
 make lint typecheck test  # the gates
+docker compose up -d --wait db && make migrate
+make serve                # API docs at http://127.0.0.1:8000/docs, admin at /admin
 ```
 
 Gates: `ruff`, `mypy --strict`, `pytest` (70% floor), `gitleaks` over every

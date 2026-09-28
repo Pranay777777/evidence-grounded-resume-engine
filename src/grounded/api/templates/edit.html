@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% set f = form or {} %}
+{% block title %}{{ record.id if record else "New record" }}{% endblock %}
+{% block content %}
+{% if errors %}<div class="errors">{% for e in errors %}<div>{{ e }}</div>{% endfor %}</div><br>{% endif %}
+
+{% if record %}
+<div class="card">
+  <h2 style="margin-top:0"><code>{{ record.id }}</code>
+    <span class="pill {{ record.verification_status }}">{{ record.verification_status }}</span></h2>
+  <p>{{ record.statement }}</p>
+  <p class="muted">Revision {{ record.revision }}
+    {% if record.verification_method %} · verified by <strong>{{ record.verification_method }}</strong>: {{ record.verified_by }}{% endif %}
+    {% if record.artifact_url %} · <a href="{{ record.artifact_url }}" rel="noopener noreferrer" target="_blank">artifact</a>{% endif %}</p>
+</div>
+
+<div class="row">
+  <form class="card" method="post" action="/admin/evidence/{{ record.id }}/verify">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <strong>Verify</strong>
+    <label>Method</label>
+    <select name="method">{% for m in methods %}<option>{{ m }}</option>{% endfor %}</select>
+    <label>Verified by</label>
+    <input name="by" required placeholder="who checked it">
+    <button>Verify</button>
+  </form>
+  <form class="card" method="post" action="/admin/evidence/{{ record.id }}/reject">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <strong>Reject</strong>
+    <p class="muted">Kept on the record, never cited.</p>
+    <label>Rejected by</label>
+    <input name="by" required>
+    <button class="secondary">Reject</button>
+  </form>
+</div>
+{% endif %}
+
+<form class="card" method="post" action="/admin/evidence">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <strong>{{ "Edit" if record else "New record" }}</strong>
+  {% if record %}<p class="muted">Changing the statement, dates, metric, links or project makes this revision {{ record.revision + 1 }} and unverified.</p>{% endif %}
+  <div class="row">
+    <div><label>ID (stable, lowercase-slug)</label>
+      <input name="id" required value="{{ record.id if record else f.get('id', '') }}" {% if record %}readonly{% endif %}></div>
+    <div><label>Kind</label>
+      <select name="kind">{% for k in kinds %}<option {% if (record and record.kind == k) or f.get('kind') == k %}selected{% endif %}>{{ k }}</option>{% endfor %}</select></div>
+    <div><label>Month (YYYY-MM)</label>
+      <input name="month" value="{{ (record.month or '') if record else f.get('month') or '' }}"></div>
+  </div>
+  <label>Statement — one checkable fact</label>
+  <textarea name="statement" required>{{ record.statement if record else f.get('statement', '') }}</textarea>
+  <div class="row">
+    <div><label>Project</label>
+      <select name="project"><option value="">—</option>{% for p in projects %}<option {% if (record and record.project_id == p) or f.get('project') == p %}selected{% endif %}>{{ p }}</option>{% endfor %}</select></div>
+    <div><label>Role</label>
+      <select name="role"><option value="">—</option>{% for r in roles %}<option {% if (record and record.role_id == r) or f.get('role') == r %}selected{% endif %}>{{ r }}</option>{% endfor %}</select></div>
+    <div><label>Metric value (metric kind only)</label>
+      <input name="metric_value" value="{{ (record.metric_value if record.metric_value is not none else '') if record else '' }}"></div>
+    <div><label>Metric unit</label>
+      <input name="metric_unit" value="{{ (record.metric_unit or '') if record else '' }}"></div>
+  </div>
+  <label>Artifact URL</label>
+  <input name="artifact_url" value="{{ (record.artifact_url or '') if record else f.get('artifact_url') or '' }}">
+  <label>Skills (comma-separated; tags, not part of the fact)</label>
+  <input name="skills" value="{{ (record.skills | join(', ')) if record else '' }}">
+  <button>Save</button>
+</form>
+{% endblock %}
