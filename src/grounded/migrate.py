@@ -10,7 +10,9 @@ wheel as well as a checkout (the lakehouse's ADR-020 pattern).
 from __future__ import annotations
 
 import argparse
+from collections.abc import Callable
 from importlib.resources import files
+from typing import Any
 
 from alembic import command
 from alembic.config import Config
@@ -19,6 +21,22 @@ from alembic.script import ScriptDirectory
 from sqlalchemy import Engine, create_engine
 
 from grounded.config import get_settings
+
+
+def for_dialect(dialect: str) -> Callable[..., bool]:
+    """An autogenerate filter that honours `ddl_if(dialect=...)`.
+
+    Alembic compares every index in the metadata, including ones declared
+    for another database only — so on SQLite it would report the Postgres
+    HNSW index as missing. This skips schema objects that would not exist on
+    `dialect` in the first place.
+    """
+
+    def include(obj: Any, name: str | None, type_: str, reflected: bool, compare_to: Any) -> bool:
+        ddl_if = getattr(obj, "_ddl_if", None)
+        return not (not reflected and ddl_if is not None and ddl_if.dialect not in (None, dialect))
+
+    return include
 
 
 def alembic_config(engine: Engine) -> Config:

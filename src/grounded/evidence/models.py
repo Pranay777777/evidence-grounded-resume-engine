@@ -27,9 +27,13 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    event,
     func,
+    text,
 )
+from sqlalchemy.engine import Connection, Dialect
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.types import TypeDecorator, TypeEngine
 
 from grounded.evidence.enums import EvidenceKind, VerificationMethod, VerificationStatus
 
@@ -48,6 +52,41 @@ def _in(column: str, values: type[Any]) -> CheckConstraint:
 
 class Base(DeclarativeBase):
     pass
+
+
+# `create_all` must be self-sufficient on Postgres, as the migrations are:
+# the vector column cannot exist before the extension does.
+@event.listens_for(Base.metadata, "before_create")
+def _vector_extension(target: Any, connection: Connection, **_: Any) -> None:
+    if connection.dialect.name == "postgresql":
+        connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+
+
+EMBEDDING_DIM = 384
+
+
+class EmbeddingVector(TypeDecorator[list[float]]):
+    """`vector(384)` on Postgres (pgvector), JSON elsewhere.
+
+    The unit tests run on SQLite, which has no vector type; storing the same
+    list as JSON keeps the model identical on both, and the Postgres path is
+    what the integration tests and production use.
+    """
+
+    impl = JSON
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect: Dialect) -> TypeEngine[Any]:
+        if dialect.name == "postgresql":
+            from pgvector.sqlalchemy import Vector
+
+            return dialect.type_descriptor(Vector(EMBEDDING_DIM))
+        return dialect.type_descriptor(JSON())
+
+    def process_result_value(self, value: Any, dialect: Dialect) -> list[float] | None:
+        if value is None:
+            return None
+        return [float(x) for x in value]
 
 
 class Timestamps:
@@ -158,11 +197,45 @@ class Evidence(Timestamps, Base):
         return self.verification_status == VerificationStatus.VERIFIED
 
 
+class EvidenceEmbedding(Base):
+    """One record's vector under one embedder, stamped with the revision it encodes.
+
+    Keyed by (record, embedder) so models can be compared side by side
+    (step 46). A row whose `revision` is behind the record's is stale: the
+    fact changed after it was embedded, and retrieval ignores it until the
+    record is embedded again.
+    """
+
+    __tablename__ = "evidence_embedding"
+    __table_args__ = (
+        # Approximate nearest-neighbour search by cosine distance. Postgres
+        # only: SQLite has no vector index, and the tests there scan.
+        Index(
+            "ix_evidence_embedding_hnsw",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ).ddl_if(dialect="postgresql"),
+    )
+
+    evidence_id: Mapped[str] = mapped_column(
+        ForeignKey("evidence.id", ondelete="CASCADE"), primary_key=True
+    )
+    embedder: Mapped[str] = mapped_column(String(40), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    embedding: Mapped[list[float]] = mapped_column(EmbeddingVector(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
 __all__ = [
+    "EMBEDDING_DIM",
     "ID_PATTERN",
     "MONTH_PATTERN",
     "Base",
     "Evidence",
+    "EvidenceEmbedding",
     "EvidenceKind",
     "Project",
     "Role",

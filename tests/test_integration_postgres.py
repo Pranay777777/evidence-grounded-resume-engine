@@ -104,3 +104,56 @@ def test_postgres_enforces_the_metric_rule(pg: Engine) -> None:
         )
         with pytest.raises(IntegrityError):
             s.commit()
+
+
+CORPUS = Path(__file__).parent / "fixtures" / "retrieval_corpus.yaml"
+
+
+def test_pgvector_dense_search_agrees_with_plain_cosine(pg: Engine) -> None:
+    from grounded.evidence.models import EvidenceEmbedding
+    from grounded.retrieval.embedding import HashingEmbedder
+    from grounded.retrieval.index import embed_pending
+    from grounded.retrieval.search import Mode, search
+
+    embedder = HashingEmbedder()
+    query = "Delta Lake incremental loads and pytest suites"
+    ensure_schema(pg)
+    with Session(pg) as s:
+        load(s, read_file(CORPUS))
+        embed_pending(s, embedder)
+        via_pgvector = [h.evidence_id for h in search(s, query, embedder, mode=Mode.DENSE, k=4)]
+        vector = embedder.embed([query])[0]
+        rows = s.query(EvidenceEmbedding).all()
+        by_python = [
+            r.evidence_id
+            for r in sorted(
+                rows,
+                key=lambda r: (
+                    -sum(a * b for a, b in zip(r.embedding, vector, strict=True)),
+                    r.evidence_id,
+                ),
+            )
+        ]
+    assert via_pgvector == by_python[:4]
+
+
+def test_the_hnsw_index_exists_and_is_used(pg: Engine) -> None:
+    ensure_schema(pg)
+    with pg.connect() as conn:
+        method: str = conn.execute(
+            text(
+                "SELECT am.amname FROM pg_class c JOIN pg_am am ON am.oid = c.relam "
+                "WHERE c.relname = 'ix_evidence_embedding_hnsw'"
+            )
+        ).scalar_one()
+        conn.execute(text("SET enable_seqscan = off"))
+        plan = "\n".join(
+            conn.execute(
+                text(
+                    "EXPLAIN SELECT evidence_id FROM evidence_embedding "
+                    "ORDER BY embedding <=> (SELECT array_fill(0.1, ARRAY[384])::vector) LIMIT 5"
+                )
+            ).scalars()
+        )
+    assert method == "hnsw"
+    assert "ix_evidence_embedding_hnsw" in plan

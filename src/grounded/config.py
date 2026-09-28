@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     where the port mapping is the boundary."""
     port: int = 8000
 
+    embedder: Literal["bge-small", "hashing"] = "bge-small"
+    """The dense model (ADR-004). `hashing` needs no download and is what the
+    tests use; it is a lexical baseline, never a silent stand-in."""
+
     database_url: str = "postgresql+psycopg://app:app@localhost:5433/app"
     """The local compose database. Port 5433, not 5432, so this stack and the
     lakehouse's can run side by side; the driver is named so SQLAlchemy never
