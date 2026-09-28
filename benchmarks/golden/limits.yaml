@@ -1,0 +1,7 @@
+# Regression limits for `python -m grounded.evals run --check` (step 52's CI gate).
+# TARGETS, not measurements: they encode the project's claim (few fabrications
+# reach the reader) and are re-set from the first labelled run — see ADR-010.
+# Metric names are fields of grounded.evals.metrics.Report; values are 0..1.
+max:
+  output_fabrication: 0.05
+  false_accept: 0.10

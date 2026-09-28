@@ -17,3 +17,4 @@ accident.
 | [007](0007-structured-generation.md) | Structured generation through OpenRouter; retries fix structure, never facts |
 | [008](0008-hard-grounding.md) | Hard grounding: citations, currency and numbers checked before any model |
 | [009](0009-entailment-verifier.md) | An NLI entailment verifier decides which bullets survive |
+| [010](0010-golden-set-and-evals.md) | A human-labelled golden set measures the gate, not the model |

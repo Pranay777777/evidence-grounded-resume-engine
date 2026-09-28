@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install up down test lint format typecheck security serve migrate evidence index search ablate calibrate draft test-integration eval clean
+.PHONY: help install up down test lint format typecheck security serve migrate evidence index search ablate calibrate draft test-integration collect label eval clean
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -61,8 +61,14 @@ draft:  ## Draft bullets for a job description: make draft JD=job.txt (needs OPE
 test-integration:  ## Postgres + pgvector tests against the compose stack (throwaway databases)
 	GROUNDED_TEST_POSTGRES_URL=postgresql+psycopg://app:app@localhost:5433/app pytest -m integration --no-cov
 
-eval:  ## Run the evaluation harness (AI projects only)
-	python -m grounded.eval
+collect:  ## Generate golden-set bullets: make collect MODEL=<pinned-id> (needs OPENROUTER_API_KEY)
+	python -m grounded.evals collect --model $(MODEL)
+
+label:  ## Label golden-set bullets (resumable): make label BY="Your Name"
+	python -m grounded.evals label --by "$(BY)"
+
+eval:  ## Score the labelled golden set -> docs/results/eval.md, checked against limits
+	python -m grounded.evals run --out docs/results/eval.md --check benchmarks/golden/limits.yaml
 
 clean:  ## Remove caches and build artefacts
 	rm -rf .pytest_cache .ruff_cache .mypy_cache htmlcov .coverage coverage.xml dist build

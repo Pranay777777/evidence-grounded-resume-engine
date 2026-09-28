@@ -62,8 +62,8 @@ Filled in as each component ships — measured numbers only.
 | Metric | Value | How measured |
 |---|---|---|
 | Verifier false-accept rate | [calibration](docs/results/verifier-calibration.md) | 21 labelled pairs incl. 3 real embellished bullets |
-| Fabrication rate | — | golden set, not yet built |
-| Citation precision / recall | — | — |
+| Fabrication rate | — | golden set ([ADR-010](docs/adr/0010-golden-set-and-evals.md)): tooling shipped, labelling in progress |
+| Citation precision / recall | — | golden set, labelling in progress |
 | Retrieval, hybrid bge-small + rerank | **Recall@1 0.80 · Recall@10 1.00 · MRR 0.97** (BM25 alone: 0.57 · 0.93 · 0.75) | [ablation](docs/results/retrieval-ablation.md) on a synthetic benchmark (`benchmarks/retrieval/`) — the real golden set is step 50 |
 | Prompt-injection suite pass rate | — | OWASP LLM Top 10 mapping |
 
@@ -77,8 +77,9 @@ Filled in as each component ships — measured numbers only.
 - [x] Cross-encoder reranking and a recall@k ablation harness ([ADR-006](docs/adr/0006-reranking-and-ablation.md))
 - [x] Structured generation with mandatory `evidence_ids` ([ADR-007](docs/adr/0007-structured-generation.md))
 - [x] Hard grounding checks ([ADR-008](docs/adr/0008-hard-grounding.md)) and the entailment verifier ([ADR-009](docs/adr/0009-entailment-verifier.md))
-- [ ] Golden set of 100+ human-labelled generations
-- [ ] Eval harness and CI regression gate
+- [ ] Golden set of 100+ human-labelled generations — collection and labelling tools shipped ([ADR-010](docs/adr/0010-golden-set-and-evals.md)); labels in progress
+- [x] Eval harness — fabrication, gate errors, citation P/R, keyword coverage, tone; `--check` limits
+- [ ] CI regression gate
 - [ ] Prompt registry, model adapter, semantic cache
 - [ ] Prompt-injection red-team suite, PII redaction, local-model mode
 - [ ] FastAPI service with auth, multi-tenancy, rate limits and budgets

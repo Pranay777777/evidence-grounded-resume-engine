@@ -1,0 +1,136 @@
+# SYNTHETIC job descriptions for the golden set, written against the fictional
+# benchmark career (benchmarks/retrieval/corpus.yaml). `relevant` lists the
+# records a faithful résumé for this role would draw on. Several JDs ask for
+# things the career does NOT have — a grounded generator must leave them out.
+jds:
+  - id: jd01
+    title: Data Engineer — batch platform
+    relevant: [b-airflow-dags, b-dbt-models, b-scd2, b-data-quality]
+    text: >-
+      We are hiring a data engineer to own our batch platform. You will orchestrate
+      pipelines with Apache Airflow, model the warehouse in dbt, keep history for
+      slowly changing dimensions, and add data quality checks that stop bad rows
+      reaching analysts. Experience with Kubernetes is a plus.
+  - id: jd02
+    title: Analytics Engineer
+    relevant: [b-dbt-models, b-scd2, b-snowflake-cost]
+    text: >-
+      Analytics engineer to build trusted models in dbt on Snowflake. You care about
+      tested SQL, dimensional modelling and keeping warehouse spend under control.
+      Looker experience welcome.
+  - id: jd03
+    title: Streaming Data Engineer
+    relevant: [b-kafka-ingest, b-spark-streaming, b-latency]
+    text: >-
+      Join the real-time data team. Build event pipelines on Kafka and Spark
+      Structured Streaming, land data in Delta Lake, and drive end-to-end latency
+      down. You will be on call for the streaming platform.
+  - id: jd04
+    title: Data Platform Engineer — infrastructure
+    relevant: [b-terraform, b-oncall, b-docs]
+    text: >-
+      Platform engineer to run the infrastructure behind our data stack. Terraform
+      for everything, a calm approach to incidents, and runbooks that let anyone
+      recover a failed job. You will manage a team of three.
+  - id: jd05
+    title: Privacy Engineer — data
+    relevant: [b-gdpr-deletes, b-data-quality]
+    text: >-
+      We need an engineer to make our data platform compliant with GDPR: erasure
+      requests that reach every table, auditability, and validation that keeps
+      personal data where it belongs. ISO 27001 experience preferred.
+  - id: jd06
+    title: Machine Learning Engineer — churn
+    relevant: [b-churn-model, b-churn-auc, b-fastapi-serving, b-mlflow]
+    text: >-
+      ML engineer to own our retention models end to end: train and evaluate churn
+      classifiers, track experiments, and serve models behind low-latency APIs.
+      Deep learning with PyTorch is a plus.
+  - id: jd07
+    title: MLOps Engineer
+    relevant: [b-mlflow, b-drift, b-fastapi-serving]
+    text: >-
+      MLOps engineer to build the path from notebook to production: model registry,
+      experiment tracking, deployment behind REST APIs, and monitoring that catches
+      drift before customers do.
+  - id: jd08
+    title: LLM Application Engineer
+    relevant: [b-rag-retrieval, b-rag-eval, b-prompt-injection, b-deflection]
+    text: >-
+      Build retrieval-augmented generation features for our support product. Hybrid
+      search over our help centre, rigorous evaluation of answer quality, and
+      defences against prompt injection. Fine-tuning experience is a bonus.
+  - id: jd09
+    title: AI Safety Engineer — applied
+    relevant: [b-prompt-injection, b-rag-eval]
+    text: >-
+      Applied safety engineer to harden our LLM features: detect and block injected
+      instructions, build red-team evaluations, and measure how often the system
+      misbehaves.
+  - id: jd10
+    title: Search Engineer
+    relevant: [b-rag-retrieval]
+    text: >-
+      Search engineer to improve relevance: combine keyword and vector retrieval,
+      tune ranking, and measure recall. Elasticsearch experience required.
+  - id: jd11
+    title: Backend Engineer — Python
+    relevant: [b-django-api, b-fastapi-serving, b-unit-tests]
+    text: >-
+      Python backend engineer to build web services in Django and FastAPI, with a
+      strong testing habit. You will review code and mentor others.
+  - id: jd12
+    title: Full-stack Engineer
+    relevant: [b-react-portal, b-django-api, b-unit-tests]
+    text: >-
+      Full-stack engineer comfortable across a React front end and a Django back end,
+      shipping staff-facing tools with good test coverage. TypeScript preferred.
+  - id: jd13
+    title: Senior Data Engineer — cost and performance
+    relevant: [b-snowflake-cost, b-latency, b-spark-streaming]
+    text: >-
+      Senior data engineer focused on performance and cost: make pipelines faster,
+      cut cloud warehouse spend, and tune Spark. You will lead the platform
+      roadmap and set technical direction.
+  - id: jd14
+    title: Data Quality Engineer
+    relevant: [b-data-quality, b-dbt-models, b-unit-tests]
+    text: >-
+      Data quality engineer to build validation into every pipeline: expectations on
+      incoming data, tested models, and quarantining bad records.
+  - id: jd15
+    title: Engineering Mentor / Tech Lead
+    relevant: [b-mentoring, b-docs]
+    text: >-
+      Tech lead to grow a junior team: mentoring, documentation, and raising the bar
+      on production releases. You will line-manage four engineers.
+  - id: jd16
+    title: Site Reliability Engineer — data
+    relevant: [b-oncall, b-docs, b-terraform]
+    text: >-
+      SRE for our data platform: share on-call, write runbooks, automate
+      infrastructure, and own incident post-mortems. Prometheus and Grafana a plus.
+  - id: jd17
+    title: Evaluation Engineer — LLMs
+    relevant: [b-rag-eval, b-churn-auc]
+    text: >-
+      Build evaluation sets and metrics for LLM and ML systems. Labelled test sets,
+      held-out evaluation, and clear reporting of model quality.
+  - id: jd18
+    title: Cloud Data Engineer — AWS
+    relevant: [b-terraform, b-airflow-dags, b-kafka-ingest]
+    text: >-
+      Cloud data engineer on AWS: infrastructure as code, orchestrated batch loads,
+      and streaming ingestion. AWS certification required.
+  - id: jd19
+    title: Software Engineering Intern Mentor Programme — alumni
+    relevant: [b-react-portal, b-django-api]
+    text: >-
+      We are looking for engineers who started as interns building internal tools in
+      React and Django and want to grow into product engineering.
+  - id: jd20
+    title: Head of Data (stretch)
+    relevant: [b-mentoring, b-snowflake-cost, b-dbt-models]
+    text: >-
+      Head of Data to lead a department of twenty, own the data strategy, and report
+      to the CTO. Hands-on dbt and warehouse cost management expected.
