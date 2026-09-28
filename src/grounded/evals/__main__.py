@@ -15,8 +15,8 @@ from pathlib import Path
 import yaml
 
 from grounded.config import get_settings
-from grounded.evals.collect import PinRequiredError, collect
-from grounded.evals.golden import merge, read_items, read_jobs, write_items
+from grounded.evals.collect import PinRequiredError, collect, same_model
+from grounded.evals.golden import GoldenItem, merge, read_items, read_jobs, write_items
 from grounded.evals.label import label
 from grounded.evals.metrics import check, evaluate, markdown
 from grounded.evidence.store import read_file
@@ -51,21 +51,37 @@ def main(argv: list[str] | None = None) -> int:
     jobs = read_jobs(JOBS)
 
     if args.command == "collect":
+        existing = read_items(args.out)
+        skip = frozenset(i.jd_id for i in existing if same_model(i.model, args.model))
+
+        def save(batch: list[GoldenItem]) -> None:
+            merged, _ = merge(read_items(args.out), batch)
+            write_items(args.out, merged)
+
         try:
             client = OpenAICompatibleClient(
                 settings.openrouter_api_key, args.model, settings.llm_base_url
             )
-            items = collect(CORPUS, jobs, client, get_embedder(settings.embedder))
+            result = collect(
+                CORPUS, jobs, client, get_embedder(settings.embedder), skip=skip, save=save
+            )
         except (PinRequiredError, LLMError) as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
-        merged, added = merge(read_items(args.out), items)
-        write_items(args.out, merged)
+        total = len(read_items(args.out))
         print(
-            f"{added} new bullet(s) added to {args.out} ({len(merged)} in total) — label them "
-            'with `python -m grounded.evals label --by "<name>"`'
+            f"\n{len(result.items)} bullet(s) from {len(result.done)} job(s) saved to {args.out} "
+            f"({total} in total); {len(result.skipped)} job(s) already collected for this model"
         )
-        return 0
+        if result.failed:
+            why = " after repeated provider errors" if result.stopped else ""
+            print(
+                f"{len(result.failed)} job(s) not collected{why}: {', '.join(result.failed)} — "
+                "run the same command later (free models are rate limited upstream) or "
+                "with another pinned model; finished jobs are skipped",
+                file=sys.stderr,
+            )
+        return 0 if result.items or not result.failed else 1
 
     if args.command == "label":
         done, left = label(args.file, jobs, args.by, ask=input)

@@ -40,6 +40,11 @@ The judgement is about words, not spirit: "CI/CD" is not supported by "CI".
   re-collecting only *appends*. Positional IDs would let a second run
   overwrite or hide a labelled bullet; with content IDs, a labelled bullet is
   never lost and the same bullet is never labelled twice.
+- **Collection is incremental.** Free models are rate limited upstream (the
+  first real run got a 429 on its first call). Each job's bullets are saved as
+  they arrive; a provider error skips that job; three in a row stop the run
+  without spending more calls; and a rerun skips jobs the model already
+  answered, so quota is spent only on what is missing.
 - **Synthetic data only.** The career and the job descriptions are fictional:
   free OpenRouter models may log prompts, and real evidence is not loaded yet.
   Several job descriptions ask for things the career lacks (Kubernetes, line

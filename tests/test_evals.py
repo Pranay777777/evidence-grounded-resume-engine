@@ -12,7 +12,7 @@ import pytest
 
 from grounded.config import get_settings
 from grounded.evals import __main__ as cli
-from grounded.evals.collect import PinRequiredError, collect
+from grounded.evals.collect import MAX_CONSECUTIVE_FAILURES, PinRequiredError, collect, same_model
 from grounded.evals.golden import (
     GoldenItem,
     Job,
@@ -25,7 +25,7 @@ from grounded.evals.golden import (
 )
 from grounded.evals.label import label
 from grounded.evals.metrics import check, evaluate, gate, markdown, tone_ok
-from grounded.generation.llm import FREE_ROUTER, ChatResponse
+from grounded.generation.llm import FREE_ROUTER, ChatResponse, LLMError
 from grounded.retrieval.embedding import get_embedder
 from grounded.verification.nli import Label, Verdict
 
@@ -139,10 +139,15 @@ def test_merge_never_drops_or_overwrites_existing_items() -> None:
 
 
 class FakeClient:
-    """Cites a retrieved record plus one ID it was never given; fails for 'broken' jobs."""
+    """Cites a retrieved record plus one ID it was never given.
 
-    def __init__(self, model: str = "pinned/model:free") -> None:
+    Jobs mentioning BROKEN get invalid output; RATE jobs get a provider error.
+    """
+
+    def __init__(self, model: str = "pinned/model:free", limited: bool = False) -> None:
         self.model = model
+        self.limited = limited
+        self.calls = 0
 
     def complete(
         self,
@@ -151,7 +156,10 @@ class FakeClient:
         tool_choice: dict[str, Any] | None = None,
         temperature: float = 0.0,
     ) -> ChatResponse:
+        self.calls += 1
         prompt = messages[1]["content"]
+        if "RATE" in prompt or self.limited:
+            raise LLMError("provider returned 429: Provider returned error")
         if "BROKEN" in prompt:
             return ChatResponse(content="not json", tool_arguments=None, model=self.model)
         cited = "ex-delta-merge" if "ex-delta-merge" in prompt else "ex-hnsw-index"
@@ -182,8 +190,19 @@ def test_collect_refuses_the_random_router() -> None:
 
 def test_collect_keeps_every_bullet_ungated_with_its_premise() -> None:
     progress: list[str] = []
-    items = collect(CORPUS, JOBS, FakeClient(), get_embedder("hashing"), progress=progress.append)
+    saved: list[list[GoldenItem]] = []
+    result = collect(
+        CORPUS,
+        JOBS,
+        FakeClient(),
+        get_embedder("hashing"),
+        save=saved.append,
+        progress=progress.append,
+    )
+    items = result.items
     assert [i.jd_id for i in items] == ["j1", "j1"]
+    assert saved == [items]  # saved per job, as soon as it arrives
+    assert (result.done, result.failed, result.stopped) == (["j1"], ["j2"], False)
     faithful, invented = items
     assert faithful.model == "pinned/model:free" and faithful.prompt_version == "generate-v1"
     assert faithful.evidence_ids == ["ex-delta-merge"] and faithful.unknown_ids == []
@@ -193,6 +212,36 @@ def test_collect_keeps_every_bullet_ungated_with_its_premise() -> None:
     assert all(i.supported is None for i in items)
     assert progress[0] == "  j1: 2 bullet(s) from pinned/model:free"
     assert progress[1].startswith("  j2: no draft")
+
+
+def rate_jobs(n: int) -> JobSet:
+    return JobSet(jds=[Job(id=f"r{i}", title="R", text="RATE Delta Lake loads.") for i in range(n)])
+
+
+def test_a_provider_error_skips_the_job_and_the_run_continues() -> None:
+    jobs = JobSet(jds=[*rate_jobs(1).jds, *JOBS.jds])
+    progress: list[str] = []
+    result = collect(CORPUS, jobs, FakeClient(), get_embedder("hashing"), progress=progress.append)
+    assert result.done == ["j1"] and result.failed == ["r0", "j2"]
+    assert progress[0] == "  r0: provider error (provider returned 429: Provider returned error)"
+
+
+def test_consecutive_provider_errors_stop_the_run_without_spending_more_calls() -> None:
+    client = FakeClient(limited=True)
+    result = collect(CORPUS, rate_jobs(5), client, get_embedder("hashing"))
+    assert result.stopped and len(result.failed) == 5 and result.items == []
+    assert client.calls == MAX_CONSECUTIVE_FAILURES  # jobs after the streak cost nothing
+
+
+def test_finished_jobs_are_skipped() -> None:
+    client = FakeClient()
+    result = collect(CORPUS, JOBS, client, get_embedder("hashing"), skip=frozenset({"j1"}))
+    assert result.skipped == ["j1"] and result.done == []
+
+
+def test_model_ids_match_with_or_without_the_free_suffix() -> None:
+    assert same_model("google/gemma-4-31b-it", "google/gemma-4-31b-it:free")
+    assert not same_model("google/gemma-4-31b-it", "qwen/qwen3.8-27b:free")
 
 
 # ── labelling ─────────────────────────────────────────────────────────────────
@@ -412,11 +461,27 @@ def test_cli_collect_then_collect_again_adds_nothing(
     workspace: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     assert cli.main(["collect", "--model", "pinned/model:free", "--out", str(workspace)]) == 0
-    assert "2 new bullet(s) added" in capsys.readouterr().out
-    assert cli.main(["collect", "--model", "pinned/model:free", "--out", str(workspace)]) == 0
-    assert "0 new bullet(s) added" in capsys.readouterr().out and len(read_items(workspace)) == 2
+    assert "2 bullet(s) from 1 job(s) saved" in capsys.readouterr().out
+    assert cli.main(["collect", "--model", "pinned/model", "--out", str(workspace)]) == 0
+    out = capsys.readouterr().out
+    assert "0 bullet(s) from 0 job(s)" in out and "1 job(s) already collected" in out
+    assert len(read_items(workspace)) == 2
     assert cli.main(["collect", "--model", "second/model:free", "--out", str(workspace)]) == 0
     assert len(read_items(workspace)) == 4
+
+
+def test_cli_collect_after_a_rate_limit_resumes(
+    workspace: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(
+        cli, "OpenAICompatibleClient", lambda key, model, url: FakeClient(model, limited=True)
+    )
+    assert cli.main(["collect", "--model", "pinned/model:free", "--out", str(workspace)]) == 1
+    assert "1 job(s) not collected: j1" in capsys.readouterr().err
+    assert not workspace.exists()
+    monkeypatch.setattr(cli, "OpenAICompatibleClient", lambda key, model, url: FakeClient(model))
+    assert cli.main(["collect", "--model", "pinned/model:free", "--out", str(workspace)]) == 0
+    assert len(read_items(workspace)) == 2
 
 
 def test_cli_collect_needs_a_pin(workspace: Path, capsys: pytest.CaptureFixture[str]) -> None:
