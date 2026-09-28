@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install up down test lint format typecheck security seed eval clean
+.PHONY: help install up down test lint format typecheck security migrate evidence test-integration eval clean
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -33,8 +33,15 @@ security:  ## Secret scan over full history plus dependency audit
 	gitleaks git --config .gitleaks.toml --redact --no-banner --log-opts="--all" .
 	pip-audit --strict
 
-seed:  ## Load sample data (implement per project)
-	python -m grounded.seed
+migrate:  ## Bring the evidence store to the latest schema
+	python -m grounded.migrate
+
+evidence:  ## Validate and load an evidence file (FILE=evidence/private/evidence.yaml)
+	python -m grounded.evidence check $${FILE:-evidence/private/evidence.yaml}
+	python -m grounded.evidence load $${FILE:-evidence/private/evidence.yaml}
+
+test-integration:  ## Postgres + pgvector tests against the compose stack (throwaway databases)
+	GROUNDED_TEST_POSTGRES_URL=postgresql+psycopg://app:app@localhost:5433/app pytest -m integration --no-cov
 
 eval:  ## Run the evaluation harness (AI projects only)
 	python -m grounded.eval

@@ -10,12 +10,14 @@ services:
         condition: service_healthy
 
   db:
-    image: postgres:16-alpine
+    # pgvector for dense retrieval (step 44); Postgres 16 underneath.
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
       POSTGRES_DB: app
-    ports: ["5432:5432"]
+    # 5433 on the host so this stack and the lakehouse (5432) can coexist.
+    ports: ["5433:5432"]
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U app"]

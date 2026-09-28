@@ -70,3 +70,7 @@ chroma/
 .idea/
 .DS_Store
 Thumbs.db
+
+# ---- Evidence ----
+# Real career evidence stays local unless deliberately published (ADR-002).
+evidence/private/

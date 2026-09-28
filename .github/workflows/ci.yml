@@ -72,6 +72,35 @@ jobs:
           name: coverage-${{ matrix.os }}-py${{ matrix.python }}
           path: coverage.xml
 
+  integration:
+    # The unit tests run on SQLite; this runs the store on the engine it
+    # really uses — Postgres with pgvector, the compose stack's image.
+    name: Integration (Postgres + pgvector)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U app"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      GROUNDED_TEST_POSTGRES_URL: postgresql+psycopg://app:app@localhost:5432/app
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: pytest -m integration --no-cov -p no:cacheprovider
+
   security:
     name: Security
     runs-on: ubuntu-latest

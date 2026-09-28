@@ -9,3 +9,4 @@ accident.
 | ADR | Decision |
 |---|---|
 | [001](0001-grounding-constraint.md) | The grounding constraint: unsupported claims are rejected, never smoothed over |
+| [002](0002-evidence-model.md) | Atomic, versioned evidence records; a changed fact is an unverified fact |

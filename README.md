@@ -69,7 +69,7 @@ Filled in as each component ships — measured numbers only.
 ## Roadmap
 
 - [x] Repository, CI gates, and the grounding constraint (ADR-001)
-- [ ] Evidence store — Postgres + pgvector, populated with real, verified records
+- [x] Evidence store — Postgres + pgvector, atomic versioned records ([ADR-002](docs/adr/0002-evidence-model.md)); real records loading in progress
 - [ ] Evidence API and admin UI for adding and verifying records
 - [ ] Embedding and chunking pipeline, with the strategy documented
 - [ ] Hybrid retrieval with reranking, and a published recall@k ablation

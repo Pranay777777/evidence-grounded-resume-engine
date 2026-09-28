@@ -1,0 +1,97 @@
+# Drafts drawn from the public metadata-driven-lakehouse repository.
+# Every figure below was checked against the repository on 2026-09-28, but
+# none is marked verified: verifying is the candidate's act, not the
+# drafter's. Review each statement, then:
+#   python -m grounded.evidence load evidence/drafts/lakehouse.yaml
+#   python -m grounded.evidence verify <id> --method artifact --by "<who checked>"
+projects:
+  - id: metadata-driven-lakehouse
+    name: metadata-driven-lakehouse
+    summary: Config-driven Bronze → Silver → Gold lakehouse in Python on Delta Lake.
+    repo_url: https://github.com/Pranay777777/metadata-driven-lakehouse
+
+evidence:
+  - id: lakehouse-release-v1
+    kind: achievement
+    statement: Released v1.0.0 of metadata-driven-lakehouse, a config-driven Bronze-Silver-Gold lakehouse.
+    project: metadata-driven-lakehouse
+    month: 2026-09
+    skills: [python, delta-lake, data-engineering]
+    artifact_url: https://github.com/Pranay777777/metadata-driven-lakehouse/releases/tag/v1.0.0
+
+  - id: lakehouse-test-count
+    kind: metric
+    statement: The metadata-driven-lakehouse test suite has 499 tests.
+    project: metadata-driven-lakehouse
+    month: 2026-09
+    metric: {value: 499, unit: tests}
+    skills: [pytest]
+    artifact_url: https://github.com/Pranay777777/metadata-driven-lakehouse/actions/workflows/ci.yml
+
+  - id: lakehouse-test-coverage
+    kind: metric
+    statement: The metadata-driven-lakehouse test suite covers 96% of the code.
+    project: metadata-driven-lakehouse
+    month: 2026-09
+    metric: {value: 96, unit: percent}
+    skills: [pytest]
+    artifact_url: https://github.com/Pranay777777/metadata-driven-lakehouse#results
+
+  - id: lakehouse-pipeline-runtime
+    kind: metric
+    statement: The lakehouse pipeline processes 1.6 million rows across five tables, Bronze to Gold, in 10.1 seconds on a 1 vCPU, 3 GB machine.
+    project: metadata-driven-lakehouse
+    month: 2026-09
+    metric: {value: 10.1, unit: seconds}
+    skills: [pyarrow, delta-lake, benchmarking]
+    artifact_url: https://github.com/Pranay777777/metadata-driven-lakehouse#results
+
+  - id: lakehouse-arrow-vs-spark
+    kind: metric
+    statement: In the lakehouse benchmark at one million rows, the Arrow engine was 16 times faster than the Spark engine.
+    project: metadata-driven-lakehouse
+    month: 2026-09
+    metric: {value: 16, unit: times faster}
+    skills: [pyarrow, spark, benchmarking]
+    artifact_url: https://github.com/Pranay777777/metadata-driven-lakehouse#results
+
+  - id: lakehouse-adr-count
+    kind: metric
+    statement: The lakehouse design is documented in 20 architecture decision records.
+    project: metadata-driven-lakehouse
+    month: 2026-09
+    metric: {value: 20, unit: architecture decision records}
+    skills: [architecture, documentation]
+    artifact_url: https://github.com/Pranay777777/metadata-driven-lakehouse/tree/main/docs/adr
+
+  - id: lakehouse-ci-matrix
+    kind: achievement
+    statement: Set up CI for the lakehouse on Ubuntu with Python 3.11 and 3.12 and on Windows with Python 3.12, plus a Postgres integration job.
+    project: metadata-driven-lakehouse
+    month: 2026-09
+    skills: [github-actions, ci, postgres]
+    artifact_url: https://github.com/Pranay777777/metadata-driven-lakehouse/blob/main/.github/workflows/ci.yml
+
+  - id: lakehouse-pii-masking
+    kind: achievement
+    statement: Built configuration-driven PII classification and keyed-HMAC masking into the lakehouse's Silver layer.
+    project: metadata-driven-lakehouse
+    month: 2026-09
+    skills: [data-privacy, pii, python]
+    artifact_url: https://github.com/Pranay777777/metadata-driven-lakehouse/blob/main/docs/adr/0017-pii-masking.md
+
+  - id: lakehouse-migrations
+    kind: achievement
+    statement: Added Alembic migrations to the lakehouse that adopt control-plane databases created before migrations existed.
+    project: metadata-driven-lakehouse
+    month: 2026-09
+    skills: [alembic, postgres, sqlalchemy]
+    artifact_url: https://github.com/Pranay777777/metadata-driven-lakehouse/blob/main/docs/adr/0020-migrations-and-integration-tests.md
+
+  - id: lakehouse-unclosed-runs-fix
+    kind: achievement
+    statement: Found, through the lakehouse's ops dashboard, a bug that left Silver and Gold pipeline runs marked running, and fixed it.
+    project: metadata-driven-lakehouse
+    month: 2026-09
+    skills: [observability, debugging, streamlit]
+    artifact_url: https://github.com/Pranay777777/metadata-driven-lakehouse/blob/main/docs/adr/0019-ops-dashboard.md
