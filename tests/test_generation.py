@@ -208,6 +208,55 @@ def test_server_errors_back_off_then_give_up() -> None:
     assert waits == [1.0, 2.0, 4.0]
 
 
+OVERLOADED = {
+    "id": "gen-1",
+    "error": {
+        "message": "Upstream error from Nvidia: Service temporarily overloaded",
+        "code": 503,
+        "metadata": {"error_type": "provider_overloaded"},
+    },
+}
+
+
+def test_an_error_inside_a_200_body_is_retried_like_its_code() -> None:
+    waits: list[float] = []
+    script = Scripted(
+        httpx.Response(200, json=OVERLOADED), httpx.Response(200, json=tool_reply({"bullets": []}))
+    )
+    c = OpenAICompatibleClient(KEY, "m", transport=httpx.MockTransport(script), sleep=waits.append)
+    assert c.complete([{"role": "user", "content": "x"}]).model == "test/model"
+    assert waits == [1.0]
+
+
+def test_an_error_inside_a_200_body_is_reported_after_retries() -> None:
+    waits: list[float] = []
+    script = Scripted(*[httpx.Response(200, json=OVERLOADED) for _ in range(4)])
+    c = OpenAICompatibleClient(KEY, "m", transport=httpx.MockTransport(script), sleep=waits.append)
+    with pytest.raises(LLMError) as caught:
+        c.complete([{"role": "user", "content": "x"}])
+    assert str(caught.value) == (
+        "provider returned 503: Upstream error from Nvidia: Service temporarily overloaded"
+    )
+    assert waits == [1.0, 2.0, 4.0]
+
+
+def test_a_non_retryable_body_error_fails_at_once() -> None:
+    body = {"error": {"message": "bad tool schema", "code": 400}}
+    script = Scripted(httpx.Response(200, json=body))
+    with pytest.raises(LLMError, match="provider returned 400: bad tool schema"):
+        client(script).complete([{"role": "user", "content": "x"}])
+    assert len(script.requests) == 1
+    script = Scripted(*[httpx.Response(200, json={"error": {"code": "weird"}}) for _ in range(4)])
+    with pytest.raises(LLMError, match="502: unknown upstream error"):  # retried as a 502
+        client(script).complete([{"role": "user", "content": "x"}])
+
+
+def test_a_body_that_is_not_json_is_an_error() -> None:
+    script = Scripted(httpx.Response(200, text="<html>gateway</html>"))
+    with pytest.raises(LLMError, match="not JSON"):
+        client(script).complete([{"role": "user", "content": "x"}])
+
+
 def test_auth_errors_are_not_retried() -> None:
     script = Scripted(httpx.Response(401, json={"error": {"message": "No auth credentials"}}))
     with pytest.raises(LLMError, match="401: No auth credentials"):

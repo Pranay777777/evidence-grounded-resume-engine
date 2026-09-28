@@ -96,7 +96,19 @@ class OpenAICompatibleClient:
                 continue
             if response.status_code >= 400:
                 raise LLMError(f"provider returned {response.status_code}: {_reason(response)}")
-            return _parse(response.json())
+            try:
+                payload = response.json()
+            except ValueError as exc:
+                raise LLMError("provider returned a body that is not JSON") from exc
+            failure = _body_error(payload)
+            if failure is not None:
+                # OpenRouter can report an upstream failure inside a 200 response.
+                status, message = failure
+                if status in RETRYABLE and attempt < self.max_retries:
+                    self._sleep(float(2**attempt))
+                    continue
+                raise LLMError(f"provider returned {status}: {message}")
+            return _parse(payload)
         raise LLMError("retries exhausted")  # pragma: no cover — loop always returns or raises
 
     @staticmethod
@@ -107,6 +119,28 @@ class OpenAICompatibleClient:
         return float(2**attempt)
 
 
+def _body_error(payload: Any) -> tuple[int, str] | None:
+    """An error object in a 200 body with no choices, as (status, message)."""
+    if not isinstance(payload, dict) or payload.get("choices"):
+        return None
+    error = payload.get("error")
+    if not isinstance(error, dict):
+        return None
+    code = error.get("code")
+    status = code if isinstance(code, int) and 400 <= code < 600 else 502
+    return status, _describe_error(error) or "unknown upstream error"
+
+
+def _describe_error(error: dict[str, Any]) -> str:
+    message = str(error.get("message", ""))
+    metadata = error.get("metadata") or {}
+    upstream = metadata.get("provider_name")
+    raw = " ".join(str(metadata.get("raw", "")).split())
+    if upstream or raw:
+        message += f" [{upstream or 'upstream'}: {raw[:300] or 'no detail'}]"
+    return message[:400]
+
+
 def _reason(response: httpx.Response) -> str:
     """The provider's message, plus the upstream detail OpenRouter nests in metadata.
 
@@ -115,13 +149,7 @@ def _reason(response: httpx.Response) -> str:
     """
     try:
         error = response.json().get("error", {})
-        message = str(error.get("message", "")) or response.reason_phrase
-        metadata = error.get("metadata") or {}
-        upstream = metadata.get("provider_name")
-        raw = " ".join(str(metadata.get("raw", "")).split())
-        if upstream or raw:
-            message += f" [{upstream or 'upstream'}: {raw[:300] or 'no detail'}]"
-        return message[:400]
+        return _describe_error(error) if error.get("message") else response.reason_phrase
     except (ValueError, AttributeError):
         return response.reason_phrase
 
