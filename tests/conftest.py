@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.config import Settings
+from grounded.config import Settings
 
 
 @pytest.fixture

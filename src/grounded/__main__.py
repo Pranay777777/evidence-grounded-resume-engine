@@ -1,11 +1,11 @@
-"""Entry point: python -m app"""
+"""Entry point: python -m grounded"""
 
 from __future__ import annotations
 
 import logging
 
-from app.config import get_settings
-from app.logging import configure_logging
+from grounded.config import get_settings
+from grounded.logging import configure_logging
 
 
 def main() -> None:
