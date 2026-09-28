@@ -1,7 +1,7 @@
 [project]
-name = "app"
+name = "grounded"
 version = "0.1.0"
-description = "PROJECT_DESCRIPTION"
+description = "Resume generation where every claim cites verified evidence, with a measured fabrication rate"
 requires-python = ">=3.11"
 dependencies = [
   "pydantic>=2.13.5",
