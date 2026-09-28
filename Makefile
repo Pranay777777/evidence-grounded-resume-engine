@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install up down test lint format typecheck security serve migrate evidence index search test-integration eval clean
+.PHONY: help install up down test lint format typecheck security serve migrate evidence index search ablate draft test-integration eval clean
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -48,6 +48,12 @@ index:  ## Embed citable evidence (EMBEDDER=bge-small needs the [embeddings] ext
 
 search:  ## Hybrid search: make search Q="job description text"
 	python -m grounded.retrieval search "$(Q)"
+
+ablate:  ## Retrieval ablation on the synthetic benchmark -> docs/results/retrieval-ablation.md
+	python -m grounded.retrieval ablate benchmarks/retrieval/queries.yaml --corpus benchmarks/retrieval/corpus.yaml --out docs/results/retrieval-ablation.md
+
+draft:  ## Draft bullets for a job description: make draft JD=job.txt (needs OPENROUTER_API_KEY)
+	python -m grounded.generation draft --jd $(JD)
 
 test-integration:  ## Postgres + pgvector tests against the compose stack (throwaway databases)
 	GROUNDED_TEST_POSTGRES_URL=postgresql+psycopg://app:app@localhost:5433/app pytest -m integration --no-cov

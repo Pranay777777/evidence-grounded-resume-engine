@@ -13,3 +13,5 @@ accident.
 | [003](0003-evidence-api-and-admin.md) | One write path for evidence, a local CSRF-protected admin, no deletes |
 | [004](0004-chunking-and-embeddings.md) | One record per chunk; bge-small via ONNX; embeddings bound to revisions |
 | [005](0005-hybrid-retrieval.md) | Hybrid retrieval: BM25 + dense, fused by reciprocal rank |
+| [006](0006-reranking-and-ablation.md) | Cross-encoder reranking, measured by a published ablation |
+| [007](0007-structured-generation.md) | Structured generation through OpenRouter; retries fix structure, never facts |

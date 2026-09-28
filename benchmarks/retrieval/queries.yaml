@@ -1,0 +1,24 @@
+# SYNTHETIC queries with relevance labels, written with the corpus and before
+# any configuration was run. Mix of exact-term queries (tool names) and
+# paraphrases that share few words with the records they should find.
+queries:
+  - {id: q01, query: "Experience orchestrating batch pipelines with Apache Airflow", relevant: [b-airflow-dags]}
+  - {id: q02, query: "dbt modelling and SQL data warehouse design", relevant: [b-dbt-models, b-scd2]}
+  - {id: q03, query: "Reduce cloud data warehouse costs", relevant: [b-snowflake-cost]}
+  - {id: q04, query: "Keep historical versions of changing customer records", relevant: [b-scd2]}
+  - {id: q05, query: "Data validation and quality checks in pipelines", relevant: [b-data-quality]}
+  - {id: q06, query: "Real-time event streaming with Kafka and Spark", relevant: [b-kafka-ingest, b-spark-streaming]}
+  - {id: q07, query: "Make data available to analysts faster, low latency", relevant: [b-latency]}
+  - {id: q08, query: "Infrastructure as code for cloud resources", relevant: [b-terraform]}
+  - {id: q09, query: "Handle right-to-be-forgotten and privacy regulation", relevant: [b-gdpr-deletes]}
+  - {id: q10, query: "Build and evaluate a customer churn prediction model", relevant: [b-churn-model, b-churn-auc]}
+  - {id: q11, query: "Deploy machine learning models as REST APIs", relevant: [b-fastapi-serving]}
+  - {id: q12, query: "MLOps: experiment tracking, model registry and monitoring", relevant: [b-mlflow, b-drift]}
+  - {id: q13, query: "Retrieval-augmented generation with vector search", relevant: [b-rag-retrieval]}
+  - {id: q14, query: "Measure LLM application quality with a labelled test set", relevant: [b-rag-eval]}
+  - {id: q15, query: "Defend LLM features against prompt injection", relevant: [b-prompt-injection]}
+  - {id: q16, query: "Frontend development in React", relevant: [b-react-portal]}
+  - {id: q17, query: "Improve automated test coverage", relevant: [b-unit-tests]}
+  - {id: q18, query: "Coach and grow junior team members", relevant: [b-mentoring]}
+  - {id: q19, query: "Operational support: incident response and recovery procedures", relevant: [b-oncall, b-docs]}
+  - {id: q20, query: "Python backend web services", relevant: [b-django-api, b-fastapi-serving]}

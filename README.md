@@ -63,7 +63,7 @@ Filled in as each component ships — measured numbers only.
 |---|---|---|
 | Fabrication rate | — | golden set, not yet built |
 | Citation precision / recall | — | — |
-| Retrieval recall@k by configuration | — | ablation, not yet run |
+| Retrieval, hybrid bge-small + rerank | **Recall@1 0.80 · Recall@10 1.00 · MRR 0.97** (BM25 alone: 0.57 · 0.93 · 0.75) | [ablation](docs/results/retrieval-ablation.md) on a synthetic benchmark (`benchmarks/retrieval/`) — the real golden set is step 50 |
 | Prompt-injection suite pass rate | — | OWASP LLM Top 10 mapping |
 
 ## Roadmap
@@ -73,8 +73,8 @@ Filled in as each component ships — measured numbers only.
 - [x] Evidence API and admin UI for adding and verifying records ([ADR-003](docs/adr/0003-evidence-api-and-admin.md))
 - [x] Embedding and chunking pipeline, with the strategy documented ([ADR-004](docs/adr/0004-chunking-and-embeddings.md))
 - [x] Hybrid retrieval — BM25 + dense + RRF ([ADR-005](docs/adr/0005-hybrid-retrieval.md))
-- [ ] Cross-encoder reranking, and a published recall@k ablation
-- [ ] Structured generation with mandatory `evidence_ids`
+- [x] Cross-encoder reranking and a recall@k ablation harness ([ADR-006](docs/adr/0006-reranking-and-ablation.md))
+- [x] Structured generation with mandatory `evidence_ids` ([ADR-007](docs/adr/0007-structured-generation.md))
 - [ ] Entailment verifier — the technical heart of the project
 - [ ] Golden set of 100+ human-labelled generations
 - [ ] Eval harness and CI regression gate

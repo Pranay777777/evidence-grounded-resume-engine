@@ -1,0 +1,39 @@
+# SYNTHETIC retrieval benchmark corpus — fictional person, fictional employers.
+# Written for the step-46 ablation before any configuration was run. Every
+# record is marked verified so all of it is searchable.
+roles:
+  - {id: bench-de, title: Data Engineer, organisation: Northwind Analytics, start: 2023-01, end: 2024-12}
+  - {id: bench-mle, title: Machine Learning Engineer, organisation: Contoso Labs, start: 2025-01}
+  - {id: bench-intern, title: Software Engineering Intern, organisation: Fabrikam, start: 2022-06, end: 2022-12}
+projects:
+  - {id: bench-warehouse, name: Sales warehouse, role: bench-de, summary: Star-schema warehouse on Snowflake fed by Airflow}
+  - {id: bench-streaming, name: Clickstream pipeline, role: bench-de, summary: Kafka to Spark Structured Streaming to Delta}
+  - {id: bench-churn, name: Churn model, role: bench-mle, summary: Gradient-boosted churn prediction served behind an API}
+  - {id: bench-rag, name: Support assistant, role: bench-mle, summary: Retrieval-augmented support chatbot}
+  - {id: bench-portal, name: Internal portal, role: bench-intern, summary: React and Django staff portal}
+evidence:
+  - {id: b-airflow-dags, kind: achievement, statement: Wrote Airflow DAGs orchestrating nightly loads from twelve source systems., project: bench-warehouse, skills: [airflow, python], verification: {method: self_attested, by: benchmark}}
+  - {id: b-dbt-models, kind: achievement, statement: Modelled sales facts and dimensions in dbt with tests on every model., project: bench-warehouse, skills: [dbt, sql], verification: {method: self_attested, by: benchmark}}
+  - {id: b-snowflake-cost, kind: metric, statement: Cut monthly Snowflake credit spend by 35 percent by resizing warehouses and clustering tables., project: bench-warehouse, metric: {value: 35, unit: percent}, skills: [snowflake, cost-optimisation], verification: {method: self_attested, by: benchmark}}
+  - {id: b-scd2, kind: achievement, statement: Implemented slowly changing dimension type 2 history for the customer dimension., project: bench-warehouse, skills: [sql, data-modelling], verification: {method: self_attested, by: benchmark}}
+  - {id: b-data-quality, kind: achievement, statement: Added Great Expectations checks that quarantine rows failing validation., project: bench-warehouse, skills: [great-expectations, data-quality], verification: {method: self_attested, by: benchmark}}
+  - {id: b-kafka-ingest, kind: achievement, statement: Ingested clickstream events from Kafka topics with exactly-once delivery., project: bench-streaming, skills: [kafka, streaming], verification: {method: self_attested, by: benchmark}}
+  - {id: b-spark-streaming, kind: achievement, statement: Built Spark Structured Streaming jobs that write sessionised events to Delta tables., project: bench-streaming, skills: [spark, delta-lake], verification: {method: self_attested, by: benchmark}}
+  - {id: b-latency, kind: metric, statement: Reduced end-to-end event latency from fifteen minutes to under forty seconds., project: bench-streaming, metric: {value: 40, unit: seconds}, skills: [streaming, performance], verification: {method: self_attested, by: benchmark}}
+  - {id: b-oncall, kind: responsibility, statement: Shared the on-call rotation for the streaming platform., role: bench-de, skills: [operations], verification: {method: self_attested, by: benchmark}}
+  - {id: b-terraform, kind: achievement, statement: Provisioned the data platform's cloud resources with Terraform modules., role: bench-de, skills: [terraform, aws], verification: {method: self_attested, by: benchmark}}
+  - {id: b-gdpr-deletes, kind: achievement, statement: Built the pipeline that propagates customer erasure requests across every table., project: bench-warehouse, skills: [privacy, gdpr], verification: {method: self_attested, by: benchmark}}
+  - {id: b-churn-model, kind: achievement, statement: Trained a LightGBM churn classifier on twelve months of account activity., project: bench-churn, skills: [lightgbm, python], verification: {method: self_attested, by: benchmark}}
+  - {id: b-churn-auc, kind: metric, statement: The churn classifier reached an AUC of 0.87 on the held-out quarter., project: bench-churn, metric: {value: 0.87, unit: AUC}, skills: [evaluation], verification: {method: self_attested, by: benchmark}}
+  - {id: b-fastapi-serving, kind: achievement, statement: Served the churn model behind a FastAPI endpoint with request validation., project: bench-churn, skills: [fastapi, mlops], verification: {method: self_attested, by: benchmark}}
+  - {id: b-mlflow, kind: achievement, statement: Tracked experiments and registered model versions in MLflow., project: bench-churn, skills: [mlflow, mlops], verification: {method: self_attested, by: benchmark}}
+  - {id: b-drift, kind: achievement, statement: Set up weekly feature-drift monitoring that alerts when inputs shift., project: bench-churn, skills: [monitoring, mlops], verification: {method: self_attested, by: benchmark}}
+  - {id: b-rag-retrieval, kind: achievement, statement: Built hybrid keyword and vector retrieval over the help-centre articles., project: bench-rag, skills: [retrieval, pgvector], verification: {method: self_attested, by: benchmark}}
+  - {id: b-rag-eval, kind: achievement, statement: Created an evaluation set of 200 labelled support questions to measure answer quality., project: bench-rag, skills: [evaluation, llm], verification: {method: self_attested, by: benchmark}}
+  - {id: b-prompt-injection, kind: achievement, statement: Added input filtering that blocks instructions hidden in user-supplied documents., project: bench-rag, skills: [llm-security], verification: {method: self_attested, by: benchmark}}
+  - {id: b-deflection, kind: metric, statement: The support assistant resolved 22 percent of tickets without a human agent., project: bench-rag, metric: {value: 22, unit: percent}, skills: [llm], verification: {method: self_attested, by: benchmark}}
+  - {id: b-react-portal, kind: achievement, statement: Built staff-facing React pages for leave requests and approvals., project: bench-portal, skills: [react, javascript], verification: {method: self_attested, by: benchmark}}
+  - {id: b-django-api, kind: achievement, statement: Wrote Django REST endpoints backing the staff portal., project: bench-portal, skills: [django, python], verification: {method: self_attested, by: benchmark}}
+  - {id: b-unit-tests, kind: achievement, statement: Raised the portal's test coverage from 40 to 85 percent with pytest., project: bench-portal, skills: [pytest, testing], verification: {method: self_attested, by: benchmark}}
+  - {id: b-mentoring, kind: responsibility, statement: Mentored two junior engineers through their first production releases., role: bench-mle, skills: [mentoring], verification: {method: self_attested, by: benchmark}}
+  - {id: b-docs, kind: achievement, statement: Wrote the runbooks the team uses to recover failed pipeline runs., role: bench-de, skills: [documentation, operations], verification: {method: self_attested, by: benchmark}}

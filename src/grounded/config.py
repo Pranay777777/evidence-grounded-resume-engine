@@ -5,6 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,6 +25,20 @@ class Settings(BaseSettings):
     it must not be reachable from the network. The container sets 0.0.0.0,
     where the port mapping is the boundary."""
     port: int = 8000
+
+    model_cache_dir: str = ".cache/models"
+    """Where fastembed keeps downloaded models. Its default is the system temp
+    directory, which Windows clears — forcing a silent re-download."""
+
+    llm_base_url: str = "https://openrouter.ai/api/v1"
+    llm_model: str = "openrouter/free"
+    """OpenRouter's free router: it always selects an available free model that
+    supports tool calling, and every draft reports which model it actually got.
+    Free models come and go — the first pinned default stopped being free
+    within a day — so drafts use the router, and evaluation runs, which must
+    compare like with like, require a pinned model (ADR-007). List current
+    candidates with `python -m grounded.generation models`."""
+    openrouter_api_key: SecretStr = SecretStr("")
 
     embedder: Literal["bge-small", "hashing"] = "bge-small"
     """The dense model (ADR-004). `hashing` needs no download and is what the

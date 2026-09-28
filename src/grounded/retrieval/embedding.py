@@ -88,7 +88,9 @@ class FastEmbedEmbedder:
                 from fastembed import TextEmbedding
             except ImportError as exc:
                 raise ImportError(_INSTALL_HINT) from exc
-            model = TextEmbedding(self.model_name)
+            from grounded.config import get_settings
+
+            model = TextEmbedding(self.model_name, cache_dir=get_settings().model_cache_dir)
         self._model = model
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]:
