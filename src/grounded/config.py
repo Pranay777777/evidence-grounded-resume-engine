@@ -40,6 +40,12 @@ class Settings(BaseSettings):
     candidates with `python -m grounded.generation models`."""
     openrouter_api_key: SecretStr = SecretStr("")
 
+    verifier: Literal["nli-deberta"] = "nli-deberta"
+    """The entailment model that decides which bullets survive (ADR-009)."""
+    verifier_threshold: float = 0.8
+    """Entailment probability a bullet needs. Strict on purpose; set from the
+    calibration run in docs/results/verifier-calibration.md."""
+
     embedder: Literal["bge-small", "hashing"] = "bge-small"
     """The dense model (ADR-004). `hashing` needs no download and is what the
     tests use; it is a lexical baseline, never a silent stand-in."""

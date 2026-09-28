@@ -61,6 +61,7 @@ Filled in as each component ships — measured numbers only.
 
 | Metric | Value | How measured |
 |---|---|---|
+| Verifier false-accept rate | [calibration](docs/results/verifier-calibration.md) | 21 labelled pairs incl. 3 real embellished bullets |
 | Fabrication rate | — | golden set, not yet built |
 | Citation precision / recall | — | — |
 | Retrieval, hybrid bge-small + rerank | **Recall@1 0.80 · Recall@10 1.00 · MRR 0.97** (BM25 alone: 0.57 · 0.93 · 0.75) | [ablation](docs/results/retrieval-ablation.md) on a synthetic benchmark (`benchmarks/retrieval/`) — the real golden set is step 50 |
@@ -75,7 +76,7 @@ Filled in as each component ships — measured numbers only.
 - [x] Hybrid retrieval — BM25 + dense + RRF ([ADR-005](docs/adr/0005-hybrid-retrieval.md))
 - [x] Cross-encoder reranking and a recall@k ablation harness ([ADR-006](docs/adr/0006-reranking-and-ablation.md))
 - [x] Structured generation with mandatory `evidence_ids` ([ADR-007](docs/adr/0007-structured-generation.md))
-- [ ] Entailment verifier — the technical heart of the project
+- [x] Hard grounding checks ([ADR-008](docs/adr/0008-hard-grounding.md)) and the entailment verifier ([ADR-009](docs/adr/0009-entailment-verifier.md))
 - [ ] Golden set of 100+ human-labelled generations
 - [ ] Eval harness and CI regression gate
 - [ ] Prompt registry, model adapter, semantic cache
