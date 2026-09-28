@@ -1,6 +1,6 @@
 # ADR-009: An NLI entailment verifier decides which bullets survive
 
-- **Status:** accepted
+- **Status:** accepted, amended 2026-09-28 (threshold, premise)
 - **Date:** 2026-09-28
 
 ## Context
@@ -68,3 +68,19 @@ set is small (21 pairs) until the golden set (step 50) replaces it. Every
 bullet costs one inference. The model was not runnable in the build
 environment (no access to its host), so its real numbers come from the
 developer's machine — the adapter is tested against a fake session.
+
+## Amendment — threshold 0.95, and project names in the premise
+
+**Threshold.** The first calibration (21 pairs, `nli-deberta`) gave, NLI
+alone: false accept 31% at 0.8 and 15% at 0.95, with **no supported pair
+rejected at any threshold**. Raising the bar cost nothing measurable, so the
+default is now 0.95. The residual 15% is the scope-inflation blind spot,
+which ADR-008's claim-strength check now covers.
+
+**Premise.** The first verified live draft dropped a faithful bullet —
+"…masking into the lakehouse's Silver layer *for the metadata-driven-lakehouse
+project*" — at entailment 0.00, because the premise never named the project.
+A record's project link is part of its verified fact (it is in the content
+hash), so the premise now appends "This was part of the <project> project."
+for each cited record's project. Summaries and skills tags stay out: they
+are not hashed, so not verified.

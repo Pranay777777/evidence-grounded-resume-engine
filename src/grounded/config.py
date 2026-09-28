@@ -42,9 +42,9 @@ class Settings(BaseSettings):
 
     verifier: Literal["nli-deberta"] = "nli-deberta"
     """The entailment model that decides which bullets survive (ADR-009)."""
-    verifier_threshold: float = 0.8
-    """Entailment probability a bullet needs. Strict on purpose; set from the
-    calibration run in docs/results/verifier-calibration.md."""
+    verifier_threshold: float = 0.95
+    """Entailment probability a bullet needs, set from calibration: 0.95 halved
+    false accepts against 0.8 and rejected no supported pair (ADR-009)."""
 
     embedder: Literal["bge-small", "hashing"] = "bge-small"
     """The dense model (ADR-004). `hashing` needs no download and is what the

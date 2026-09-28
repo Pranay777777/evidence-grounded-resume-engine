@@ -68,7 +68,7 @@ def test_draft_prints_bullets_with_citations(
     capsys.readouterr()
     assert cli.main(["draft", "--jd", str(store)]) == 0
     out = capsys.readouterr().out
-    assert "model fake/model · prompt generate-v1 · attempts 1 · verifier fake-nli ≥ 0.8" in out
+    assert "model fake/model · prompt generate-v1 · attempts 1 · verifier fake-nli ≥ 0.95" in out
     assert "✓ Implemented incremental loads with Delta Lake MERGE." in out
     assert "cites: ex-delta-merge (rev 1, self_attested) · entailment 0.99" in out
     assert "1 kept, 0 dropped." in out
@@ -145,5 +145,5 @@ def test_a_bullet_the_verifier_rejects_is_dropped_with_its_reason(
     assert cli.main(["draft", "--jd", str(store)]) == 0
     out = capsys.readouterr().out
     assert "✗ Implemented incremental loads" in out
-    assert "not entailed by the cited evidence (neutral, entailment 0.30 < 0.8)" in out
+    assert "not entailed by the cited evidence (neutral, entailment 0.30 < 0.95)" in out
     assert "0 kept, 1 dropped." in out

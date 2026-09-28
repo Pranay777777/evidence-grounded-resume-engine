@@ -1,6 +1,6 @@
 # ADR-008: Hard grounding — deterministic checks before any model
 
-- **Status:** accepted
+- **Status:** accepted, amended 2026-09-28 (claim strength)
 - **Date:** 2026-09-28
 
 ## Context
@@ -46,3 +46,26 @@ stale and invented citations can never survive.
 ("doubled") or states a year the record does not is dropped, even when true.
 That is the preferred direction of error. Technology names, scope and
 outcomes are not checkable this way; they are what ADR-009 is for.
+
+## Amendment — claim strength
+
+The first calibration run showed the NLI verifier's blind spot exactly: it
+scored "Led the migration" as entailed by "Contributed to the migration"
+(0.98), "Architected the backend" by "Wrote endpoints" (0.99), "Owned
+on-call" by "Shared the on-call rotation" (0.91), and "real-time" by
+"nightly" (0.86). The rest of each sentence overlaps, so the verb upgrade
+reads as agreement — and scope inflation is precisely what interviewers
+probe.
+
+A fifth deterministic check now runs before NLI: ownership and leadership
+terms (led, owned, architected, spearheaded, managed, sole, founded, …) and
+"real-time" must appear, in some form, in a cited statement. The lexicon is
+small and grouped by root; words with honest technical meanings
+("architecture", "orchestrate", "directed") are deliberately excluded.
+
+**Caveat, recorded before the re-run:** the lexicon was written after seeing
+those failures, so the calibration set is now partly its training data.
+Replaying the committed NLI verdicts predicts the full gate at 0% false
+accept and 0% false reject on those 21 pairs; that figure is optimistic by
+construction. The independent test is the human-labelled golden set (step
+50), which the lexicon has never seen.

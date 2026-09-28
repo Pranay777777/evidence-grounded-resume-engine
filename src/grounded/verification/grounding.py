@@ -9,13 +9,18 @@ Checks run cheapest first, and the first failure rejects the bullet:
    old verification to a new claim (ADR-002).
 3. **Numbers are supported** — every quantity in the bullet appears in the
    records it cites.
-4. **The evidence entails the bullet** — an NLI model reads the cited
+4. **Claim strength is supported** — ownership and leadership words ("led",
+   "owned", "architected"…) appear in a cited statement. The NLI model
+   cannot see these upgrades; calibration proved it.
+5. **The evidence entails the bullet** — an NLI model reads the cited
    statements as premise and the bullet as hypothesis. Only entailment above
    the threshold passes; neutral and contradiction both fail (ADR-009).
 
-The premise is the cited *statements* only. A record's project summary and
-skills tags help retrieval find it, but they are not verified facts, so they
-cannot be what makes a claim true.
+The premise is the cited *statements*, plus the name of each cited record's
+project: the project link is part of the verified fact (it is in the content
+hash), so "…for the metadata-driven-lakehouse project" is supported. Project
+summaries and skills tags are not — they help retrieval, but they are not
+verified, so they cannot be what makes a claim true.
 """
 
 from __future__ import annotations
@@ -28,11 +33,12 @@ from grounded.evidence.models import Evidence
 from grounded.generation.schema import Bullet, Draft
 from grounded.verification.nli import Label, Verifier
 from grounded.verification.numbers import unsupported
+from grounded.verification.strength import escalations
 
-DEFAULT_THRESHOLD = 0.8
-"""Entailment probability a bullet needs. Deliberately strict: a wrongly
-rejected true bullet costs a line, a wrongly accepted false one costs trust.
-Set from the calibration run (docs/results/verifier-calibration.md)."""
+DEFAULT_THRESHOLD = 0.95
+"""Entailment probability a bullet needs. Set from the first calibration run
+(2026-09-28): raising it from 0.8 to 0.95 halved false accepts (31% → 15%)
+and rejected no supported pair. See docs/results/verifier-calibration.md."""
 
 
 @dataclass(frozen=True)
@@ -89,6 +95,14 @@ def _citation_problem(
     return None, records
 
 
+def premise(records: list[Evidence]) -> str:
+    """Cited statements, then the projects they belong to — nothing unverified."""
+    parts = [r.statement.strip() for r in records]
+    for name in dict.fromkeys(r.project.name for r in records if r.project is not None):
+        parts.append(f"This was part of the {name} project.")
+    return " ".join(parts)
+
+
 def ground(
     session: Session,
     draft: Draft,
@@ -112,11 +126,19 @@ def ground(
             report.dropped.append(Dropped(bullet, f"states {stated}, not in the cited evidence"))
             continue
 
+        inflated = escalations(bullet.text, [r.statement for r in records])
+        if inflated:
+            words = ", ".join(f"'{w}'" for w in sorted(inflated))
+            report.dropped.append(
+                Dropped(bullet, f"claims {words}, which the cited evidence does not state")
+            )
+            continue
+
         citations = [Citation(r.id, r.revision, r.verification_method) for r in records]
         if verifier is None:
             report.kept.append(Kept(bullet, citations, None))
             continue
-        verdict = verifier.check(" ".join(r.statement for r in records), bullet.text)
+        verdict = verifier.check(premise(records), bullet.text)
         score = f"entailment {verdict.entailment:.2f}"
         if verdict.label is Label.CONTRADICTION:
             report.dropped.append(Dropped(bullet, f"contradicted by the cited evidence ({score})"))

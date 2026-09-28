@@ -224,7 +224,7 @@ def test_neutral_means_dropped_not_kept(session: Session) -> None:
     verifier = Scripted({text: Verdict(Label.NEUTRAL, 0.41)})
     report = ground(session, draft((text, ["lakehouse-ci-matrix"])), candidates(session), verifier)
     assert report.dropped[0].reason == (
-        "not entailed by the cited evidence (neutral, entailment 0.41 < 0.8)"
+        "not entailed by the cited evidence (neutral, entailment 0.41 < 0.95)"
     )
 
 
@@ -251,15 +251,15 @@ def test_contradiction_is_named(session: Session) -> None:
     assert report.dropped[0].reason.startswith("contradicted by the cited evidence")
 
 
-def test_the_premise_is_the_cited_statements_only(session: Session) -> None:
-    """Project summaries and skills help retrieval; they are not proof."""
+def test_the_premise_is_statements_plus_project_names_only(session: Session) -> None:
+    """The project link is part of the verified fact; summaries and skills are not."""
     verifier = Scripted()
     ground(
         session,
         draft(
             (
-                "Built configuration-driven PII classification and keyed-HMAC masking "
-                "into the lakehouse's Silver layer.",
+                "Built configuration-driven PII classification and keyed-HMAC masking into the "
+                "lakehouse's Silver layer for the metadata-driven-lakehouse project.",
                 ["lakehouse-pii-masking"],
             )
         ),
@@ -268,7 +268,8 @@ def test_the_premise_is_the_cited_statements_only(session: Session) -> None:
     )
     premise = verifier.calls[0][0]
     record = session.get(Evidence, "lakehouse-pii-masking")
-    assert record is not None and premise == record.statement
+    assert record is not None
+    assert premise == f"{record.statement} This was part of the metadata-driven-lakehouse project."
     assert "Delta Lake" not in premise and "data-privacy" not in premise
 
 
@@ -438,3 +439,57 @@ def test_the_calibration_report(
 def test_the_real_lakehouse_records_load(session: Session) -> None:
     assert session.get(Evidence, "lakehouse-ci-matrix") is not None
     assert read_file(LAKEHOUSE).evidence
+
+
+# --- claim strength ------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("bullet", "evidence", "flagged"),
+    [
+        ("Led the migration to Snowflake.", "Contributed to the migration to Snowflake.", {"led"}),
+        (
+            "Architected the staff portal's backend.",
+            "Wrote Django REST endpoints.",
+            {"architected"},
+        ),
+        ("Owned on-call for the platform.", "Shared the on-call rotation.", {"owned"}),
+        ("Built real-time pipelines.", "Wrote nightly Airflow DAGs.", {"real-time"}),
+        ("Single-handedly rebuilt the ETL.", "Rebuilt the ETL.", {"sole"}),
+        ("Led the platform team.", "Led the platform team of four engineers.", set()),
+        ("Leading the data team.", "Led the data team.", set()),
+        ("Wrote DAGs that orchestrate loads.", "Wrote DAGs orchestrating loads.", set()),
+        ("Documented 20 architecture decisions.", "Documented 20 architecture decisions.", set()),
+    ],
+)
+def test_claim_strength_needs_its_own_evidence(
+    bullet: str, evidence: str, flagged: set[str]
+) -> None:
+    from grounded.verification.strength import escalations
+
+    assert escalations(bullet, [evidence]) == flagged
+
+
+def test_an_inflated_verb_is_dropped_before_the_model_is_asked(session: Session) -> None:
+    verifier = Scripted()
+    report = ground(
+        session,
+        draft(("Led CI for the lakehouse on Ubuntu and Windows.", ["lakehouse-ci-matrix"])),
+        candidates(session),
+        verifier,
+    )
+    assert report.dropped[0].reason == "claims 'led', which the cited evidence does not state"
+    assert verifier.calls == []
+
+
+def test_the_full_gate_and_nli_alone_are_both_reported() -> None:
+    pairs = read_pairs(PAIRS)
+    everything_entailed = [Verdict(Label.ENTAILMENT, 0.99)] * len(pairs.pairs)
+    full = {r.threshold: r for r in sweep(pairs, everything_entailed, full_gate=True)}
+    alone = {r.threshold: r for r in sweep(pairs, everything_entailed, full_gate=False)}
+    assert alone[0.95].false_accept == 1.0  # a verifier that says yes to everything
+    # ...still loses the five pairs the deterministic checks stop.
+    assert full[0.95].false_accept == pytest.approx(8 / 13)
+    report = markdown(pairs, everything_entailed, "yes-man")
+    assert "## Full gate" in report and "## NLI alone" in report
+    assert "| syn-led | synthetic | no | strength led |" in report
