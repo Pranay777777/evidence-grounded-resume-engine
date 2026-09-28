@@ -19,7 +19,10 @@ class Settings(BaseSettings):
 
     app_env: Literal["local", "ci", "staging", "prod"] = "local"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
-    database_url: str = "postgresql://app:app@localhost:5432/app"
+    database_url: str = "postgresql+psycopg://app:app@localhost:5433/app"
+    """The local compose database. Port 5433, not 5432, so this stack and the
+    lakehouse's can run side by side; the driver is named so SQLAlchemy never
+    has to guess between psycopg2 and psycopg 3."""
 
 
 @lru_cache

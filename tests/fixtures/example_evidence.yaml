@@ -1,0 +1,32 @@
+# FICTIONAL — test fixture only. Example Corp and every fact below are
+# invented, so nothing here can leak into a real résumé.
+roles:
+  - id: example-engineer
+    title: Data Engineer
+    organisation: Example Corp
+    start: 2024-01
+    end: 2025-06
+projects:
+  - id: example-pipeline
+    name: Example ingestion pipeline
+    role: example-engineer
+    repo_url: https://example.com/pipeline
+evidence:
+  - id: example-pipeline-built
+    kind: achievement
+    statement: Built an ingestion pipeline loading five source tables nightly.
+    project: example-pipeline
+    month: 2024-06
+    skills: [python, sql]
+  - id: example-pipeline-latency
+    kind: metric
+    statement: The nightly pipeline completes in under ten minutes.
+    project: example-pipeline
+    month: 2024-09
+    metric: {value: 10, unit: minutes}
+    artifact_url: https://example.com/pipeline/runs
+    verification: {method: artifact, by: CI dashboard}
+  - id: example-oncall
+    kind: responsibility
+    statement: Took part in the team's weekly on-call rotation.
+    role: example-engineer
