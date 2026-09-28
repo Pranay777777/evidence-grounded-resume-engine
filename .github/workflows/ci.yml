@@ -31,32 +31,45 @@ jobs:
       - run: ruff format --check .
 
   typecheck:
-    name: Type check
+    # mypy checks against the running interpreter, and dependencies resolve
+    # differently per version (NumPy 2.5 dropped 3.11) — so check both.
+    name: Type check (py${{ matrix.python }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: ${{ matrix.python }}
           cache: pip
       - run: pip install -e ".[dev]"
       - run: mypy
 
   test:
-    name: Tests
-    runs-on: ubuntu-latest
+    name: Tests (${{ matrix.os }}, py${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, python: "3.11" }
+          - { os: ubuntu-latest, python: "3.12" }
+          - { os: windows-latest, python: "3.12" }   # the developer machine
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: ${{ matrix.python }}
           cache: pip
       - run: pip install -e ".[dev]"
       - run: pytest
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: coverage
+          name: coverage-${{ matrix.os }}-py${{ matrix.python }}
           path: coverage.xml
 
   security:
@@ -72,7 +85,7 @@ jobs:
           curl -sSL -o gitleaks.tar.gz \
             "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_linux_x64.tar.gz"
           tar -xzf gitleaks.tar.gz gitleaks
-          ./gitleaks detect --config .gitleaks.toml --redact --no-banner --exit-code 1
+          ./gitleaks git --config .gitleaks.toml --redact --no-banner --exit-code 1 --log-opts="--all" .
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
