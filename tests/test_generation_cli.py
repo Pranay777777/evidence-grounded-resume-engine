@@ -14,6 +14,7 @@ from grounded.evidence.__main__ import main as evidence_main
 from grounded.generation import __main__ as cli
 from grounded.generation.llm import ChatResponse, LLMError
 from grounded.retrieval.__main__ import main as retrieval_main
+from grounded.verification.nli import Label, Verdict
 
 CORPUS = Path(__file__).parent / "fixtures" / "retrieval_corpus.yaml"
 
@@ -33,6 +34,18 @@ class FakeClient:
             ]
         }
         return ChatResponse(content=None, tool_arguments=json.dumps(args), model="fake/model")
+
+
+class AlwaysEntailed:
+    name = "fake-nli"
+
+    def check(self, premise: str, hypothesis: str) -> Verdict:
+        return Verdict(Label.ENTAILMENT, 0.99)
+
+
+@pytest.fixture(autouse=True)
+def no_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli, "get_verifier", lambda name, cache_dir=None: AlwaysEntailed())
 
 
 @pytest.fixture(autouse=True)
@@ -55,8 +68,10 @@ def test_draft_prints_bullets_with_citations(
     capsys.readouterr()
     assert cli.main(["draft", "--jd", str(store)]) == 0
     out = capsys.readouterr().out
-    assert "model fake/model · prompt generate-v1 · attempts 1" in out
-    assert "cites: ex-delta-merge" in out and "Draft only" in out
+    assert "model fake/model · prompt generate-v1 · attempts 1 · verifier fake-nli ≥ 0.8" in out
+    assert "✓ Implemented incremental loads with Delta Lake MERGE." in out
+    assert "cites: ex-delta-merge (rev 1, self_attested) · entailment 0.99" in out
+    assert "1 kept, 0 dropped." in out
 
 
 def test_draft_as_json(
@@ -66,7 +81,8 @@ def test_draft_as_json(
     capsys.readouterr()
     assert cli.main(["draft", "--jd", str(store), "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
-    assert payload["bullets"][0]["evidence_ids"] == ["ex-delta-merge"]
+    assert payload["kept"][0]["evidence_ids"] == ["ex-delta-merge"]
+    assert payload["verifier"] == "fake-nli" and payload["dropped"] == []
 
 
 def test_provider_errors_are_reported(
@@ -101,3 +117,33 @@ def test_models_reports_catalogue_errors(
     monkeypatch.setattr(cli, "free_tool_models", down)
     assert cli.main(["models"]) == 1
     assert "503" in capsys.readouterr().err
+
+
+def test_unverified_mode_says_so(
+    store: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(cli, "OpenAICompatibleClient", FakeClient)
+    capsys.readouterr()
+    assert cli.main(["draft", "--jd", str(store), "--unverified"]) == 0
+    out = capsys.readouterr().out
+    assert "· UNVERIFIED" in out and "entailment not checked" in out
+    assert "Do not use these bullets as they stand" in out
+
+
+def test_a_bullet_the_verifier_rejects_is_dropped_with_its_reason(
+    store: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    class Neutral:
+        name = "fake-nli"
+
+        def check(self, premise: str, hypothesis: str) -> Verdict:
+            return Verdict(Label.NEUTRAL, 0.3)
+
+    monkeypatch.setattr(cli, "OpenAICompatibleClient", FakeClient)
+    monkeypatch.setattr(cli, "get_verifier", lambda name, cache_dir=None: Neutral())
+    capsys.readouterr()
+    assert cli.main(["draft", "--jd", str(store)]) == 0
+    out = capsys.readouterr().out
+    assert "✗ Implemented incremental loads" in out
+    assert "not entailed by the cited evidence (neutral, entailment 0.30 < 0.8)" in out
+    assert "0 kept, 1 dropped." in out

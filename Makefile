@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install up down test lint format typecheck security serve migrate evidence index search ablate draft test-integration eval clean
+.PHONY: help install up down test lint format typecheck security serve migrate evidence index search ablate calibrate draft test-integration eval clean
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -51,6 +51,9 @@ search:  ## Hybrid search: make search Q="job description text"
 
 ablate:  ## Retrieval ablation on the synthetic benchmark -> docs/results/retrieval-ablation.md
 	python -m grounded.retrieval ablate benchmarks/retrieval/queries.yaml --corpus benchmarks/retrieval/corpus.yaml --out docs/results/retrieval-ablation.md
+
+calibrate:  ## Measure the entailment verifier -> docs/results/verifier-calibration.md
+	python -m grounded.verification calibrate benchmarks/verifier/pairs.yaml --out docs/results/verifier-calibration.md
 
 draft:  ## Draft bullets for a job description: make draft JD=job.txt (needs OPENROUTER_API_KEY)
 	python -m grounded.generation draft --jd $(JD)

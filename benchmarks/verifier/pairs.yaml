@@ -1,0 +1,88 @@
+# Verifier calibration pairs. premise = cited evidence statement(s);
+# hypothesis = a generated bullet; supported = whether the premise entails it.
+# `source: real-draft` pairs are verbatim output from the first live generation
+# (2026-09-28, liquid/lfm-2.5-2.6b:free) — each embellishes a real, verified
+# record. The rest are synthetic, labelled by the author before any run.
+pairs:
+  # --- real embellishments: every one cites a true record and still overclaims
+  - id: real-cicd
+    source: real-draft
+    premise: Set up CI for the lakehouse on Ubuntu with Python 3.11 and 3.12 and on Windows with Python 3.12, plus a Postgres integration job.
+    hypothesis: Set up CI/CD for the lakehouse with GitHub Actions supporting Python 3.11/3.12 on Ubuntu and Windows, including a PostgreSQL integration job.
+    supported: false
+  - id: real-developed
+    source: real-draft
+    premise: The lakehouse pipeline processes 1.6 million rows across five tables, Bronze to Gold, in 10.1 seconds on a 1 vCPU, 3 GB machine.
+    hypothesis: Developed a pipeline processing 1.6 million rows across five tables from Bronze to Gold stages in 10.1 seconds on a 1 vCPU, 3 GB machine.
+    supported: false
+  - id: real-delta
+    source: real-draft
+    premise: Built configuration-driven PII classification and keyed-HMAC masking into the lakehouse's Silver layer.
+    hypothesis: Built configuration-driven PII classification and keyed-HMAC masking in the lakehouse's Silver layer using Python on Delta Lake.
+    supported: false
+
+  # --- faithful restatements: should pass
+  - {id: syn-faithful-ci, source: synthetic, supported: true,
+     premise: "Set up CI for the lakehouse on Ubuntu with Python 3.11 and 3.12 and on Windows with Python 3.12, plus a Postgres integration job.",
+     hypothesis: "Set up continuous integration for the lakehouse on Ubuntu and Windows, including a Postgres integration job."}
+  - {id: syn-faithful-pii, source: synthetic, supported: true,
+     premise: "Built configuration-driven PII classification and keyed-HMAC masking into the lakehouse's Silver layer.",
+     hypothesis: "Built configuration-driven PII classification and keyed-HMAC masking in the lakehouse's Silver layer."}
+  - {id: syn-faithful-runtime, source: synthetic, supported: true,
+     premise: "The lakehouse pipeline processes 1.6 million rows across five tables, Bronze to Gold, in 10.1 seconds on a 1 vCPU, 3 GB machine.",
+     hypothesis: "The lakehouse pipeline processes 1.6 million rows across five tables in 10.1 seconds."}
+  - {id: syn-faithful-airflow, source: synthetic, supported: true,
+     premise: "Wrote Airflow DAGs orchestrating nightly loads from twelve source systems.",
+     hypothesis: "Wrote Airflow DAGs that orchestrate nightly loads from twelve source systems."}
+  - {id: syn-faithful-dbt, source: synthetic, supported: true,
+     premise: "Modelled sales facts and dimensions in dbt with tests on every model.",
+     hypothesis: "Modelled sales facts and dimensions in dbt, with tests on every model."}
+  - {id: syn-faithful-mentoring, source: synthetic, supported: true,
+     premise: "Mentored two junior engineers through their first production releases.",
+     hypothesis: "Mentored two junior engineers through their first production releases."}
+  - {id: syn-faithful-react, source: synthetic, supported: true,
+     premise: "Built staff-facing React pages for leave requests and approvals.",
+     hypothesis: "Built React pages for staff leave requests and approvals."}
+
+  # --- scope inflation: contributed → led, part → whole
+  - {id: syn-led, source: synthetic, supported: false,
+     premise: "Contributed to the migration of the reporting warehouse to Snowflake.",
+     hypothesis: "Led the migration of the reporting warehouse to Snowflake."}
+  - {id: syn-whole-team, source: synthetic, supported: false,
+     premise: "Shared the on-call rotation for the streaming platform.",
+     hypothesis: "Owned on-call for the streaming platform."}
+  - {id: syn-architected, source: synthetic, supported: false,
+     premise: "Wrote Django REST endpoints backing the staff portal.",
+     hypothesis: "Architected the staff portal's backend."}
+
+  # --- invented technology or scope
+  - {id: syn-kubernetes, source: synthetic, supported: false,
+     premise: "Served the churn model behind a FastAPI endpoint with request validation.",
+     hypothesis: "Served the churn model behind a FastAPI endpoint deployed on Kubernetes."}
+  - {id: syn-realtime, source: synthetic, supported: false,
+     premise: "Wrote Airflow DAGs orchestrating nightly loads from twelve source systems.",
+     hypothesis: "Built real-time pipelines orchestrating loads from twelve source systems."}
+  - {id: syn-cd, source: synthetic, supported: false,
+     premise: "Added unit tests to the payments service and ran them in CI.",
+     hypothesis: "Added unit tests to the payments service and automated its deployment."}
+
+  # --- invented outcome or impact
+  - {id: syn-outcome, source: synthetic, supported: false,
+     premise: "Built Power BI reports for the finance team.",
+     hypothesis: "Built Power BI reports that sped up the finance team's month-end close."}
+  - {id: syn-adoption, source: synthetic, supported: false,
+     premise: "Created an evaluation set of 200 labelled support questions to measure answer quality.",
+     hypothesis: "Created an evaluation set of 200 support questions, now used across the company."}
+
+  # --- contradiction
+  - {id: syn-contradict-number, source: synthetic, supported: false,
+     premise: "Reduced end-to-end event latency from fifteen minutes to under forty seconds.",
+     hypothesis: "Reduced end-to-end event latency from fifteen minutes to under five seconds."}
+  - {id: syn-contradict-direction, source: synthetic, supported: false,
+     premise: "Raised the portal's test coverage from 40 to 85 percent with pytest.",
+     hypothesis: "The portal's test coverage fell from 85 to 40 percent."}
+
+  # --- multi-record premise
+  - {id: syn-two-records, source: synthetic, supported: true,
+     premise: "Trained a LightGBM churn classifier on twelve months of account activity. The churn classifier reached an AUC of 0.87 on the held-out quarter.",
+     hypothesis: "Trained a LightGBM churn classifier that reached an AUC of 0.87 on a held-out quarter."}

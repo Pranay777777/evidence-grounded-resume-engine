@@ -33,6 +33,10 @@ dev = [
 # The dense embedding model (ADR-004): ONNX via fastembed, no PyTorch.
 embeddings = [
   "fastembed>=0.5",
+  "onnxruntime>=1.17",
+  "tokenizers>=0.15",
+  "huggingface-hub>=0.20",
+  "numpy>=1.26",
 ]
 
 [build-system]
@@ -66,7 +70,7 @@ show_error_codes = true
 files = ["src", "tests"]
 
 [[tool.mypy.overrides]]
-module = ["fastembed.*"]
+module = ["fastembed.*", "onnxruntime.*", "huggingface_hub.*", "tokenizers.*", "numpy.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

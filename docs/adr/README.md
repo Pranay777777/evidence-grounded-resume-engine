@@ -15,3 +15,5 @@ accident.
 | [005](0005-hybrid-retrieval.md) | Hybrid retrieval: BM25 + dense, fused by reciprocal rank |
 | [006](0006-reranking-and-ablation.md) | Cross-encoder reranking, measured by a published ablation |
 | [007](0007-structured-generation.md) | Structured generation through OpenRouter; retries fix structure, never facts |
+| [008](0008-hard-grounding.md) | Hard grounding: citations, currency and numbers checked before any model |
+| [009](0009-entailment-verifier.md) | An NLI entailment verifier decides which bullets survive |
