@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install up down test lint format typecheck security serve migrate evidence test-integration eval clean
+.PHONY: help install up down test lint format typecheck security serve migrate evidence index search test-integration eval clean
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -42,6 +42,12 @@ migrate:  ## Bring the evidence store to the latest schema
 evidence:  ## Validate and load an evidence file (FILE=evidence/private/evidence.yaml)
 	python -m grounded.evidence check $${FILE:-evidence/private/evidence.yaml}
 	python -m grounded.evidence load $${FILE:-evidence/private/evidence.yaml}
+
+index:  ## Embed citable evidence (EMBEDDER=bge-small needs the [embeddings] extra)
+	python -m grounded.retrieval index
+
+search:  ## Hybrid search: make search Q="job description text"
+	python -m grounded.retrieval search "$(Q)"
 
 test-integration:  ## Postgres + pgvector tests against the compose stack (throwaway databases)
 	GROUNDED_TEST_POSTGRES_URL=postgresql+psycopg://app:app@localhost:5433/app pytest -m integration --no-cov

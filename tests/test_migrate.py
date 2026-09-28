@@ -11,7 +11,7 @@ from sqlalchemy import Engine, create_engine
 
 from grounded.config import get_settings
 from grounded.evidence.models import Base
-from grounded.migrate import current, ensure_schema, head, main
+from grounded.migrate import current, ensure_schema, for_dialect, head, main
 from schema_shape import shape
 
 
@@ -30,7 +30,9 @@ def test_migrations_match_the_models(engine: Engine, tmp_path: Path) -> None:
 def test_no_model_change_is_missing_a_migration(engine: Engine) -> None:
     ensure_schema(engine)
     with engine.connect() as conn:
-        context = MigrationContext.configure(conn, opts={"compare_type": True})
+        context = MigrationContext.configure(
+            conn, opts={"compare_type": True, "include_object": for_dialect(conn.dialect.name)}
+        )
         assert compare_metadata(context, Base.metadata) == []
 
 

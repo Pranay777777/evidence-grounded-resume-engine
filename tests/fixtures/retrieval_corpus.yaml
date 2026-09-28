@@ -1,0 +1,44 @@
+# FICTIONAL — retrieval test corpus. Built so each retriever has something
+# only it can find: exact rare terms for BM25, shared vocabulary for dense.
+roles:
+  - id: example-de
+    title: Data Engineer
+    organisation: Example Corp
+projects:
+  - id: example-lakehouse
+    name: Example lakehouse
+    role: example-de
+    summary: Delta Lake medallion platform
+  - id: example-dashboards
+    name: Example dashboards
+    role: example-de
+evidence:
+  - id: ex-hnsw-index
+    kind: achievement
+    statement: Added an HNSW vector index to speed up nearest-neighbour search.
+    project: example-lakehouse
+    skills: [pgvector, postgres]
+    verification: {method: self_attested, by: tester}
+  - id: ex-delta-merge
+    kind: achievement
+    statement: Implemented incremental loads with Delta Lake MERGE.
+    project: example-lakehouse
+    skills: [delta-lake, python]
+    verification: {method: self_attested, by: tester}
+  - id: ex-pytest-suite
+    kind: metric
+    statement: Wrote a pytest suite of 400 tests for the ingestion code.
+    project: example-lakehouse
+    metric: {value: 400, unit: tests}
+    skills: [pytest, python]
+    verification: {method: self_attested, by: tester}
+  - id: ex-powerbi-report
+    kind: achievement
+    statement: Built Power BI reports for the finance team.
+    project: example-dashboards
+    skills: [power-bi, dax]
+    verification: {method: self_attested, by: tester}
+  - id: ex-unverified-claim
+    kind: achievement
+    statement: Led a Kubernetes migration across twelve clusters.
+    skills: [kubernetes]

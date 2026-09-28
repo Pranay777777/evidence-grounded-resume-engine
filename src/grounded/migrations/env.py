@@ -7,6 +7,7 @@ from sqlalchemy import create_engine, pool
 
 from grounded.config import get_settings
 from grounded.evidence.models import Base
+from grounded.migrate import for_dialect
 
 target_metadata = Base.metadata
 
@@ -23,6 +24,7 @@ def _run(connection: object) -> None:
         target_metadata=target_metadata,
         render_as_batch=True,
         compare_type=True,
+        include_object=for_dialect(connection.dialect.name),  # type: ignore[attr-defined]
     )
     with context.begin_transaction():
         context.run_migrations()

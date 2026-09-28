@@ -71,8 +71,9 @@ Filled in as each component ships — measured numbers only.
 - [x] Repository, CI gates, and the grounding constraint (ADR-001)
 - [x] Evidence store — Postgres + pgvector, atomic versioned records ([ADR-002](docs/adr/0002-evidence-model.md)); real records loading in progress
 - [x] Evidence API and admin UI for adding and verifying records ([ADR-003](docs/adr/0003-evidence-api-and-admin.md))
-- [ ] Embedding and chunking pipeline, with the strategy documented
-- [ ] Hybrid retrieval with reranking, and a published recall@k ablation
+- [x] Embedding and chunking pipeline, with the strategy documented ([ADR-004](docs/adr/0004-chunking-and-embeddings.md))
+- [x] Hybrid retrieval — BM25 + dense + RRF ([ADR-005](docs/adr/0005-hybrid-retrieval.md))
+- [ ] Cross-encoder reranking, and a published recall@k ablation
 - [ ] Structured generation with mandatory `evidence_ids`
 - [ ] Entailment verifier — the technical heart of the project
 - [ ] Golden set of 100+ human-labelled generations
