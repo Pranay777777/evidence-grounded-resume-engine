@@ -26,6 +26,7 @@ from grounded.evidence.models import EMBEDDING_DIM, Evidence, EvidenceEmbedding
 from grounded.retrieval.chunking import document_text
 from grounded.retrieval.embedding import Embedder, tokens
 from grounded.retrieval.index import citable_records
+from grounded.retrieval.rerank import Reranker
 
 MAX_QUERY_CHARS = 20_000
 """A job description is rarely a tenth of this. The cap stops an oversized
@@ -151,12 +152,16 @@ def search(
     k: int = 10,
     mode: Mode = Mode.HYBRID,
     depth: int = 50,
+    reranker: Reranker | None = None,
+    rerank_depth: int = 20,
 ) -> list[Hit]:
     """Top-`k` citable records for `query`.
 
     `depth` is how far down each retriever's list fusion looks. It is wider
     than `k` so that a record ranked modestly by both retrievers can still
-    outrank one ranked highly by only one.
+    outrank one ranked highly by only one. With a `reranker`, the top
+    `rerank_depth` fused candidates are re-scored by reading query and
+    record together, and the final order is the reranker's.
     """
     if mode is not Mode.BM25 and embedder is None:
         raise ValueError(f"mode '{mode}' needs an embedder")
@@ -174,7 +179,24 @@ def search(
         assert embedder is not None
         rankings["dense"] = _dense_ranking(session, records, query, embedder, depth)
 
+    fused = rrf(rankings)
+    if reranker is None:
+        return [
+            Hit(evidence_id=i, statement=by_id[i].statement, score=score, ranks=ranks)
+            for i, score, ranks in fused[:k]
+        ]
+
+    candidates = fused[: max(rerank_depth, k)]
+    scores = reranker.score(
+        query[:MAX_QUERY_CHARS], [document_text(by_id[i]) for i, _, _ in candidates]
+    )
+    order = sorted(zip(candidates, scores, strict=True), key=lambda p: (-p[1], p[0][0]))
     return [
-        Hit(evidence_id=i, statement=by_id[i].statement, score=score, ranks=ranks)
-        for i, score, ranks in rrf(rankings)[:k]
+        Hit(
+            evidence_id=i,
+            statement=by_id[i].statement,
+            score=score,
+            ranks={**ranks, "rerank": position},
+        )
+        for position, ((i, _, ranks), score) in enumerate(order[:k], start=1)
     ]
