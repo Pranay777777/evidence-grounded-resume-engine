@@ -32,7 +32,7 @@ def label(
         if item.supported is not None:
             continue
         remaining = sum(i.supported is None for i in items)
-        show(f"\n-- {item.id} · {titles.get(item.jd_id, item.jd_id)} · {remaining} left")
+        show(f"\n-- {item.id} | {titles.get(item.jd_id, item.jd_id)} | {remaining} left")
         show(f"EVIDENCE: {item.premise or '(nothing resolvable was cited)'}")
         if item.unknown_ids:
             show(f"  (also cites unknown IDs: {', '.join(item.unknown_ids)})")

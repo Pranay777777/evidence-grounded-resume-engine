@@ -76,7 +76,7 @@ def main(argv: list[str] | None = None) -> int:
         if result.failed:
             why = " after repeated provider errors" if result.stopped else ""
             print(
-                f"{len(result.failed)} job(s) not collected{why}: {', '.join(result.failed)} — "
+                f"{len(result.failed)} job(s) not collected{why}: {', '.join(result.failed)} - "
                 "run the same command later (free models are rate limited upstream) or "
                 "with another pinned model; finished jobs are skipped",
                 file=sys.stderr,
@@ -90,7 +90,7 @@ def main(argv: list[str] | None = None) -> int:
 
     items = read_items(args.file)
     if not any(i.supported is not None for i in items):
-        print(f"no labelled bullets in {args.file} — collect and label first", file=sys.stderr)
+        print(f"no labelled bullets in {args.file} - collect and label first", file=sys.stderr)
         return 1
     verifier = get_verifier(settings.verifier, cache_dir=settings.model_cache_dir)
     corpus_text = [e.statement for e in read_file(CORPUS).evidence]

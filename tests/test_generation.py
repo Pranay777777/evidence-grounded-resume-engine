@@ -215,6 +215,28 @@ def test_auth_errors_are_not_retried() -> None:
     assert len(script.requests) == 1
 
 
+def test_upstream_detail_is_reported() -> None:
+    body = {
+        "error": {
+            "message": "Provider returned error",
+            "metadata": {
+                "provider_name": "Alibaba",
+                "raw": '{"error":\n  "tool_choice object is not supported"}',
+            },
+        }
+    }
+    script = Scripted(httpx.Response(400, json=body))
+    with pytest.raises(LLMError) as caught:
+        client(script).complete([{"role": "user", "content": "x"}])
+    assert str(caught.value) == (
+        'provider returned 400: Provider returned error [Alibaba: {"error": '
+        '"tool_choice object is not supported"}]'
+    )
+    script = Scripted(httpx.Response(400, json={"error": {"message": "m", "metadata": {}}}))
+    with pytest.raises(LLMError, match=r"400: m$"):
+        client(script).complete([{"role": "user", "content": "x"}])
+
+
 def test_network_failures_are_retried_then_reported() -> None:
     def down(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("unreachable")

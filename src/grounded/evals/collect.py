@@ -67,7 +67,7 @@ def collect(
 ) -> Collection:
     if client.model == FREE_ROUTER:
         raise PinRequiredError(
-            f"the golden set needs a pinned model, not '{FREE_ROUTER}' — pick one from "
+            f"the golden set needs a pinned model, not '{FREE_ROUTER}' - pick one from "
             "`python -m grounded.generation models` and pass --model"
         )
     engine = create_engine("sqlite://")

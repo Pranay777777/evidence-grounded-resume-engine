@@ -108,9 +108,20 @@ class OpenAICompatibleClient:
 
 
 def _reason(response: httpx.Response) -> str:
+    """The provider's message, plus the upstream detail OpenRouter nests in metadata.
+
+    OpenRouter wraps upstream failures as "Provider returned error"; the actual
+    cause (a rate limit, an unsupported parameter) is in `metadata.raw`.
+    """
     try:
         error = response.json().get("error", {})
-        return str(error.get("message", ""))[:200] or response.reason_phrase
+        message = str(error.get("message", "")) or response.reason_phrase
+        metadata = error.get("metadata") or {}
+        upstream = metadata.get("provider_name")
+        raw = " ".join(str(metadata.get("raw", "")).split())
+        if upstream or raw:
+            message += f" [{upstream or 'upstream'}: {raw[:300] or 'no detail'}]"
+        return message[:400]
     except (ValueError, AttributeError):
         return response.reason_phrase
 

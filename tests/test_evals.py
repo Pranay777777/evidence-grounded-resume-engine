@@ -395,8 +395,8 @@ def test_tone_rules(text: str, ok: bool) -> None:
 def test_markdown_leads_with_output_fabrication() -> None:
     report = evaluate(golden(), GOLDEN_JOBS, Scripted(), 0.95, CORPUS_TEXT)
     text = markdown(report, "scripted-nli", 0.95)
-    assert text.startswith("# Evaluation — golden set\n")
-    assert "7 human-labelled bullets (of 9)" in text and "`scripted-nli` ≥ 0.95" in text
+    assert text.startswith("# Evaluation - golden set\n")
+    assert "7 human-labelled bullets (of 9)" in text and "`scripted-nli` >= 0.95" in text
     assert "| **Output fabrication rate** (unsupported among kept) | **33%** |" in text
     assert "False accepts (read these first): b" in text
     empty = markdown(evaluate([], GOLDEN_JOBS, Scripted(), 0.95, []), "x", 0.95)
