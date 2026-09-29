@@ -18,3 +18,4 @@ accident.
 | [008](0008-hard-grounding.md) | Hard grounding: citations, currency and numbers checked before any model |
 | [009](0009-entailment-verifier.md) | An NLI entailment verifier decides which bullets survive |
 | [010](0010-golden-set-and-evals.md) | A human-labelled golden set measures the gate, not the model |
+| [011](0011-ci-regression-gate.md) | CI re-measures the gate on frozen data and fails on regression |

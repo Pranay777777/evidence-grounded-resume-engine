@@ -495,6 +495,8 @@ def test_cli_label_and_run(
 ) -> None:
     assert cli.main(["run", "--file", str(workspace)]) == 1
     assert "collect and label first" in capsys.readouterr().err
+    assert cli.main(["run", "--file", str(workspace), "--skip-if-unlabelled"]) == 0
+    assert "skipped: no labelled bullets" in capsys.readouterr().out
 
     cli.main(["collect", "--model", "pinned/model:free", "--out", str(workspace)])
     monkeypatch.setattr("builtins.input", answers("y", "n", ""))

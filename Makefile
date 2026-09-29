@@ -67,8 +67,9 @@ collect:  ## Generate golden-set bullets: make collect MODEL=<pinned-id> (needs 
 label:  ## Label golden-set bullets (resumable): make label BY="Your Name"
 	python -m grounded.evals label --by "$(BY)"
 
-eval:  ## Score the labelled golden set -> docs/results/eval.md, checked against limits
-	python -m grounded.evals run --out docs/results/eval.md --check benchmarks/golden/limits.yaml
+eval:  ## Regression gate (as CI runs it): verifier calibration, then the golden set once labelled
+	python -m grounded.verification calibrate benchmarks/verifier/pairs.yaml --out docs/results/verifier-calibration.md --max-false-accept 0 --max-false-reject 0
+	python -m grounded.evals run --out docs/results/eval.md --check benchmarks/golden/limits.yaml --skip-if-unlabelled
 
 clean:  ## Remove caches and build artefacts
 	rm -rf .pytest_cache .ruff_cache .mypy_cache htmlcov .coverage coverage.xml dist build

@@ -65,6 +65,7 @@ Filled in as each component ships — measured numbers only.
 | Fabrication rate | — | golden set ([ADR-010](docs/adr/0010-golden-set-and-evals.md)): tooling shipped, labelling in progress |
 | Citation precision / recall | — | golden set, labelling in progress |
 | Retrieval, hybrid bge-small + rerank | **Recall@1 0.80 · Recall@10 1.00 · MRR 0.97** (BM25 alone: 0.57 · 0.93 · 0.75) | [ablation](docs/results/retrieval-ablation.md) on a synthetic benchmark (`benchmarks/retrieval/`) — the real golden set is step 50 |
+| Improvement curve | [before/after per change](docs/results/improvement-curve.md) | each row from a committed result file |
 | Prompt-injection suite pass rate | — | OWASP LLM Top 10 mapping |
 
 ## Roadmap
@@ -79,7 +80,7 @@ Filled in as each component ships — measured numbers only.
 - [x] Hard grounding checks ([ADR-008](docs/adr/0008-hard-grounding.md)) and the entailment verifier ([ADR-009](docs/adr/0009-entailment-verifier.md))
 - [ ] Golden set of 100+ human-labelled generations — collection and labelling tools shipped ([ADR-010](docs/adr/0010-golden-set-and-evals.md)); labels in progress
 - [x] Eval harness — fabrication, gate errors, citation P/R, keyword coverage, tone; `--check` limits
-- [ ] CI regression gate
+- [x] CI regression gate — `make eval` on every push, on frozen data, never calling an LLM ([ADR-011](docs/adr/0011-ci-regression-gate.md))
 - [ ] Prompt registry, model adapter, semantic cache
 - [ ] Prompt-injection red-team suite, PII redaction, local-model mode
 - [ ] FastAPI service with auth, multi-tenancy, rate limits and budgets
@@ -97,7 +98,7 @@ make serve                # API docs at http://127.0.0.1:8000/docs, admin at /ad
 
 Gates: `ruff`, `mypy --strict`, `pytest` (70% floor), `gitleaks` over every
 ref, and `pip-audit`. CI runs on Ubuntu (Python 3.11 and 3.12) and Windows
-(3.12).
+(3.12). An eval job re-measures the grounding gate on every push (`make eval`).
 
 ## Related
 

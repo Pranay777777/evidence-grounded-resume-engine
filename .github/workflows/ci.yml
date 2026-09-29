@@ -101,6 +101,31 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: pytest -m integration --no-cov -p no:cacheprovider
 
+  eval:
+    # The regression gate (ADR-011): the grounding gate is re-measured on
+    # frozen, labelled data on every push. Deterministic - it never calls an
+    # LLM; the only download is the small NLI model, cached between runs.
+    name: Eval regression gate
+    runs-on: ubuntu-latest
+    env:
+      MODEL_CACHE_DIR: .cache/models
+      HF_HUB_DISABLE_TELEMETRY: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/cache@v4
+        with:
+          path: .cache/models
+          key: nli-${{ hashFiles('src/grounded/verification/nli.py') }}
+      - run: pip install -e ".[dev,embeddings]"
+      - run: make eval
+      - name: Publish the results to the job summary
+        if: always()
+        run: cat docs/results/verifier-calibration.md docs/results/eval.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
   security:
     name: Security
     runs-on: ubuntu-latest

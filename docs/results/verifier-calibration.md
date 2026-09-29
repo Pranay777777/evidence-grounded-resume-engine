@@ -1,4 +1,4 @@
-# Verifier calibration — 2026-09-28
+# Verifier calibration — 2026-09-29
 
 Verifier `nli-deberta` on 21 labelled pairs (13 unsupported, 8 supported) from `benchmarks/verifier/pairs.yaml`. Three pairs are verbatim bullets from the first live generation; the rest are synthetic.
 
@@ -23,6 +23,14 @@ Verifier `nli-deberta` on 21 labelled pairs (13 unsupported, 8 supported) from `
 | 0.80 | 31% | 0% | 81% |
 | 0.90 | 23% | 0% | 86% |
 | 0.95 | 15% | 0% | 90% |
+
+## Layer by layer at 0.95 (the production threshold)
+
+| Gate | False accept | False reject | Accuracy |
+|---|---|---|---|
+| NLI alone | 15% | 0% | 90% |
+| + number check | 15% | 0% | 90% |
+| + claim-strength check (full gate) | 0% | 0% | 100% |
 
 ## Per pair
 

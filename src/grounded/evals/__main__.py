@@ -46,6 +46,11 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--file", type=Path, default=GOLDEN)
     run.add_argument("--out", type=Path)
     run.add_argument("--check", type=Path, help="YAML of metric limits; exit 1 if exceeded")
+    run.add_argument(
+        "--skip-if-unlabelled",
+        action="store_true",
+        help="exit 0 (not 1) when nothing is labelled yet - for CI before labelling is done",
+    )
     args = parser.parse_args(argv)
     settings = get_settings()
     jobs = read_jobs(JOBS)
@@ -90,6 +95,9 @@ def main(argv: list[str] | None = None) -> int:
 
     items = read_items(args.file)
     if not any(i.supported is not None for i in items):
+        if args.skip_if_unlabelled:
+            print(f"skipped: no labelled bullets in {args.file} yet")
+            return 0
         print(f"no labelled bullets in {args.file} - collect and label first", file=sys.stderr)
         return 1
     verifier = get_verifier(settings.verifier, cache_dir=settings.model_cache_dir)

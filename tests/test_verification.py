@@ -20,10 +20,16 @@ from grounded.evidence.schema import EvidenceFile
 from grounded.evidence.store import load, read_file
 from grounded.generation.schema import Draft
 from grounded.verification.calibration import (
+    LAYERS,
     THRESHOLDS,
     PairSet,
+    Row,
     accepted,
+    breaches,
+    check_failure,
+    layers,
     markdown,
+    rates,
     read_pairs,
     sweep,
 )
@@ -413,6 +419,41 @@ def test_the_sweep_counts_both_error_types() -> None:
     assert [r.threshold for r in sweep(pairs, verdicts)] == list(THRESHOLDS)
 
 
+def pair_set(*rows: tuple[str, str, bool]) -> PairSet:
+    return PairSet.model_validate(
+        {
+            "pairs": [
+                {"id": f"p{i}", "source": "s", "premise": premise, "hypothesis": h, "supported": ok}
+                for i, (premise, h, ok) in enumerate(rows)
+            ]
+        }
+    )
+
+
+def test_layers_add_one_check_at_a_time() -> None:
+    pairs = pair_set(
+        ("Contributed to the migration.", "Led the migration.", False),
+        ("Cut cost.", "Cut cost by 40%.", False),
+        ("Built Airflow DAGs.", "Built Airflow DAGs.", True),
+    )
+    entailed = [Verdict(Label.ENTAILMENT, 0.99)] * 3
+    table = dict(layers(pairs, entailed, 0.95))
+    assert list(table) == [name for name, _, _ in LAYERS]
+    assert table["NLI alone"].false_accept == 1.0
+    assert table["+ number check"].false_accept == 0.5
+    assert table["+ claim-strength check (full gate)"].false_accept == 0.0
+    assert all(r.false_reject == 0.0 and r.threshold == 0.95 for r in table.values())
+    assert check_failure(pairs.pairs[0], strength=False) is None
+    assert rates(pairs, entailed, 0.95) == table["+ claim-strength check (full gate)"]
+
+
+def test_breaches_name_each_broken_limit() -> None:
+    row = Row(threshold=0.95, false_accept=0.15, false_reject=0.125, accuracy=0.8)
+    assert breaches(row, None, None) == []
+    assert breaches(row, 0.2, 0.2) == []
+    assert breaches(row, 0.0, 0.0) == ["false accept 15% > 0%", "false reject 12% > 0%"]
+
+
 def test_neutral_is_never_accepted_whatever_the_threshold() -> None:
     assert not accepted(Verdict(Label.NEUTRAL, 0.99), 0.5)
 
@@ -433,7 +474,33 @@ def test_the_calibration_report(
     assert (
         markdown(read_pairs(PAIRS), [Verdict(Label.NEUTRAL, 0.1)] * 21, "x").count("neutral") == 21
     )
+    assert "## Layer by layer at 0.95" in report
+    # The checks alone catch 5 of the 13 unsupported pairs; NLI must catch the other 8.
+    assert "| + claim-strength check (full gate) | 62% | 0% | 62% |" in report
     capsys.readouterr()
+
+
+def test_calibration_as_a_regression_gate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from grounded.verification import __main__ as cli
+
+    get_settings.cache_clear()
+    # Entails everything: the full gate still catches the check-detectable pairs,
+    # but not the ones only NLI can catch - a real regression.
+    monkeypatch.setattr(cli, "get_verifier", lambda name, cache_dir=None: Scripted())
+    assert cli.main(["calibrate", str(PAIRS)]) == 0  # no limits, no gate
+    assert cli.main(["calibrate", str(PAIRS), "--max-false-accept", "0"]) == 1
+    assert "REGRESSION: full gate at 0.95: false accept" in capsys.readouterr().err
+    assert (
+        cli.main(["calibrate", str(PAIRS), "--max-false-accept", "1", "--max-false-reject", "0"])
+        == 0
+    )
+
+    neutral = Scripted(default=Verdict(Label.NEUTRAL, 0.0))
+    monkeypatch.setattr(cli, "get_verifier", lambda name, cache_dir=None: neutral)
+    assert cli.main(["calibrate", str(PAIRS), "--max-false-reject", "0"]) == 1
+    assert "false reject 100% > 0%" in capsys.readouterr().err
 
 
 def test_the_real_lakehouse_records_load(session: Session) -> None:
