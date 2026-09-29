@@ -17,6 +17,7 @@ from grounded.retrieval.__main__ import main as retrieval_main
 from grounded.verification.nli import Label, Verdict
 
 CORPUS = Path(__file__).parent / "fixtures" / "retrieval_corpus.yaml"
+FP = "7a4e4c0acb2b"  # the generate-v1 fingerprint, pinned in test_prompts.py
 
 
 class FakeClient:
@@ -64,11 +65,14 @@ def store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
 def test_draft_prints_bullets_with_citations(
     store: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    monkeypatch.setattr(cli, "OpenAICompatibleClient", FakeClient)
+    monkeypatch.setattr(cli, "make_client", FakeClient)
     capsys.readouterr()
     assert cli.main(["draft", "--jd", str(store)]) == 0
     out = capsys.readouterr().out
-    assert "model fake/model · prompt generate-v1 · attempts 1 · verifier fake-nli ≥ 0.95" in out
+    assert (
+        f"model fake/model | prompt generate-v1 ({FP}) | attempts 1 | verifier fake-nli ≥ 0.95"
+        in out
+    )
     assert "✓ Implemented incremental loads with Delta Lake MERGE." in out
     assert "cites: ex-delta-merge (rev 1, self_attested) · entailment 0.99" in out
     assert "1 kept, 0 dropped." in out
@@ -77,7 +81,7 @@ def test_draft_prints_bullets_with_citations(
 def test_draft_as_json(
     store: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    monkeypatch.setattr(cli, "OpenAICompatibleClient", FakeClient)
+    monkeypatch.setattr(cli, "make_client", FakeClient)
     capsys.readouterr()
     assert cli.main(["draft", "--jd", str(store), "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
@@ -91,7 +95,7 @@ def test_provider_errors_are_reported(
     def broken(*args: Any, **kwargs: Any) -> Any:
         raise LLMError("no API key — set OPENROUTER_API_KEY")
 
-    monkeypatch.setattr(cli, "OpenAICompatibleClient", broken)
+    monkeypatch.setattr(cli, "make_client", broken)
     assert cli.main(["draft", "--jd", str(store)]) == 1
     assert "OPENROUTER_API_KEY" in capsys.readouterr().err
 
@@ -122,11 +126,11 @@ def test_models_reports_catalogue_errors(
 def test_unverified_mode_says_so(
     store: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    monkeypatch.setattr(cli, "OpenAICompatibleClient", FakeClient)
+    monkeypatch.setattr(cli, "make_client", FakeClient)
     capsys.readouterr()
     assert cli.main(["draft", "--jd", str(store), "--unverified"]) == 0
     out = capsys.readouterr().out
-    assert "· UNVERIFIED" in out and "entailment not checked" in out
+    assert "| UNVERIFIED" in out and "entailment not checked" in out
     assert "Do not use these bullets as they stand" in out
 
 
@@ -139,7 +143,7 @@ def test_a_bullet_the_verifier_rejects_is_dropped_with_its_reason(
         def check(self, premise: str, hypothesis: str) -> Verdict:
             return Verdict(Label.NEUTRAL, 0.3)
 
-    monkeypatch.setattr(cli, "OpenAICompatibleClient", FakeClient)
+    monkeypatch.setattr(cli, "make_client", FakeClient)
     monkeypatch.setattr(cli, "get_verifier", lambda name, cache_dir=None: Neutral())
     capsys.readouterr()
     assert cli.main(["draft", "--jd", str(store)]) == 0

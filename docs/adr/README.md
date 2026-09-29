@@ -19,3 +19,5 @@ accident.
 | [009](0009-entailment-verifier.md) | An NLI entailment verifier decides which bullets survive |
 | [010](0010-golden-set-and-evals.md) | A human-labelled golden set measures the gate, not the model |
 | [011](0011-ci-regression-gate.md) | CI re-measures the gate on frozen data and fails on regression |
+| [012](0012-prompt-registry-and-model-adapters.md) | Versioned prompts in a registry; models behind one adapter spec |
+| [013](0013-semantic-cache.md) | A semantic cache that cannot weaken grounding |

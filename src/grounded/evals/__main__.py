@@ -1,9 +1,14 @@
 """Golden set and evaluation.
 
-python -m grounded.evals collect --model <pinned-id> [--out benchmarks/golden/golden.jsonl]
+python -m grounded.evals collect --model <pinned-id> [--prompt generate-v1]
+                                 [--out benchmarks/golden/golden.jsonl]
 python -m grounded.evals label --by "Your Name" [--file benchmarks/golden/golden.jsonl]
 python -m grounded.evals run [--file benchmarks/golden/golden.jsonl] [--out docs/results/eval.md]
                              [--check benchmarks/golden/limits.yaml]
+python -m grounded.evals compare [--out docs/results/model-comparison.md]
+
+--model takes an adapter spec (ADR-012): an OpenRouter id, ollama:<model> or openai:<model>.
+Each collection call is logged to runs.jsonl beside the golden set (tokens, latency).
 """
 
 from __future__ import annotations
@@ -16,11 +21,22 @@ import yaml
 
 from grounded.config import get_settings
 from grounded.evals.collect import PinRequiredError, collect, same_model
-from grounded.evals.golden import GoldenItem, merge, read_items, read_jobs, write_items
+from grounded.evals.compare import compare
+from grounded.evals.compare import markdown as comparison_markdown
+from grounded.evals.golden import (
+    GoldenItem,
+    append_run,
+    merge,
+    read_items,
+    read_jobs,
+    read_runs,
+    write_items,
+)
 from grounded.evals.label import label
 from grounded.evals.metrics import check, evaluate, markdown
 from grounded.evidence.store import read_file
-from grounded.generation.llm import LLMError, OpenAICompatibleClient
+from grounded.generation.adapters import make_client, parse
+from grounded.generation.llm import LLMError
 from grounded.retrieval.embedding import get_embedder
 from grounded.verification.nli import get_verifier
 
@@ -37,7 +53,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     sub = parser.add_subparsers(dest="command", required=True)
     col = sub.add_parser("collect")
-    col.add_argument("--model", required=True, help="a pinned model id (not openrouter/free)")
+    col.add_argument("--model", required=True, help="a pinned model spec (not openrouter/free)")
+    col.add_argument("--prompt", help="registered prompt version (default: PROMPT_VERSION)")
     col.add_argument("--out", type=Path, default=GOLDEN)
     lab = sub.add_parser("label")
     lab.add_argument("--by", required=True)
@@ -51,26 +68,41 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="exit 0 (not 1) when nothing is labelled yet - for CI before labelling is done",
     )
+    cmp = sub.add_parser("compare", help="compare the models in the golden set")
+    cmp.add_argument("--file", type=Path, default=GOLDEN)
+    cmp.add_argument("--out", type=Path)
     args = parser.parse_args(argv)
     settings = get_settings()
     jobs = read_jobs(JOBS)
 
     if args.command == "collect":
+        prompt_version = args.prompt or settings.prompt_version
         existing = read_items(args.out)
-        skip = frozenset(i.jd_id for i in existing if same_model(i.model, args.model))
+        _, model_id = parse(args.model)
+        skip = frozenset(
+            i.jd_id
+            for i in existing
+            if same_model(i.model, model_id) and i.prompt_version == prompt_version
+        )
+        runs_path = args.out.with_name("runs.jsonl")
 
         def save(batch: list[GoldenItem]) -> None:
             merged, _ = merge(read_items(args.out), batch)
             write_items(args.out, merged)
 
         try:
-            client = OpenAICompatibleClient(
-                settings.openrouter_api_key, args.model, settings.llm_base_url
-            )
+            client = make_client(args.model, settings)
             result = collect(
-                CORPUS, jobs, client, get_embedder(settings.embedder), skip=skip, save=save
+                CORPUS,
+                jobs,
+                client,
+                get_embedder(settings.embedder),
+                skip=skip,
+                save=save,
+                prompt_version=prompt_version,
+                log=lambda run: append_run(runs_path, run),
             )
-        except (PinRequiredError, LLMError) as exc:
+        except (PinRequiredError, LLMError, ValueError) as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
         total = len(read_items(args.out))
@@ -94,6 +126,27 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     items = read_items(args.file)
+    if args.command == "compare":
+        if not items:
+            print(f"no bullets in {args.file} - collect first", file=sys.stderr)
+            return 1
+        verifier = get_verifier(settings.verifier, cache_dir=settings.model_cache_dir)
+        corpus_text = [e.statement for e in read_file(CORPUS).evidence]
+        rows = compare(
+            items,
+            read_runs(args.file.with_name("runs.jsonl")),
+            jobs,
+            verifier,
+            settings.verifier_threshold,
+            corpus_text,
+        )
+        text = comparison_markdown(rows, verifier.name, settings.verifier_threshold, len(jobs.jds))
+        print(text)
+        if args.out:
+            args.out.parent.mkdir(parents=True, exist_ok=True)
+            args.out.write_text(text, encoding="utf-8", newline="\n")
+        return 0
+
     if not any(i.supported is not None for i in items):
         if args.skip_if_unlabelled:
             print(f"skipped: no labelled bullets in {args.file} yet")

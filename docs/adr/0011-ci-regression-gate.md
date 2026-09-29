@@ -38,6 +38,16 @@ Both reports go to the job summary.
   thin: supported pairs score 0.98-0.99 against a 0.95 threshold, and no
   unsupported pair the checks miss scores above 0.56.
 
+### Why not DeepEval or promptfoo
+
+Both were considered (the plan named them). Their faithfulness and
+hallucination metrics are **LLM-judged**: CI would need an API key, spend
+quota on every push, and give scores that move when the judge model changes.
+This gate is an NLI model plus deterministic checks, already measured on
+labelled data (ADR-009) - wrapping it in a framework would add a dependency
+without adding a guarantee. If an LLM judge is added later (a second opinion,
+ADR-009), it runs on demand against a pinned model, not as the CI gate.
+
 ## Consequences
 
 - The zero false-accept result partly rests on a lexicon written after

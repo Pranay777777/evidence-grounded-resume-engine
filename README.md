@@ -65,6 +65,8 @@ Filled in as each component ships — measured numbers only.
 | Fabrication rate | — | golden set ([ADR-010](docs/adr/0010-golden-set-and-evals.md)): tooling shipped, labelling in progress |
 | Citation precision / recall | — | golden set, labelling in progress |
 | Retrieval, hybrid bge-small + rerank | **Recall@1 0.80 · Recall@10 1.00 · MRR 0.97** (BM25 alone: 0.57 · 0.93 · 0.75) | [ablation](docs/results/retrieval-ablation.md) on a synthetic benchmark (`benchmarks/retrieval/`) — the real golden set is step 50 |
+| Model comparison | [3 models, same job descriptions](docs/results/model-comparison.md) | gate-kept rate, citation P/R, keyword coverage, tokens and latency per draft |
+| Semantic cache | [hit rate vs false hits](docs/results/semantic-cache.md) | 24 labelled job-description pairs, no model calls |
 | Improvement curve | [before/after per change](docs/results/improvement-curve.md) | each row from a committed result file |
 | Prompt-injection suite pass rate | — | OWASP LLM Top 10 mapping |
 
@@ -81,7 +83,7 @@ Filled in as each component ships — measured numbers only.
 - [ ] Golden set of 100+ human-labelled generations — collection and labelling tools shipped ([ADR-010](docs/adr/0010-golden-set-and-evals.md)); labels in progress
 - [x] Eval harness — fabrication, gate errors, citation P/R, keyword coverage, tone; `--check` limits
 - [x] CI regression gate — `make eval` on every push, on frozen data, never calling an LLM ([ADR-011](docs/adr/0011-ci-regression-gate.md))
-- [ ] Prompt registry, model adapter, semantic cache
+- [x] Prompt registry ([ADR-012](docs/adr/0012-prompt-registry-and-model-adapters.md)), model adapters with a model comparison, and a semantic cache that still gates every draft ([ADR-013](docs/adr/0013-semantic-cache.md))
 - [ ] Prompt-injection red-team suite, PII redaction, local-model mode
 - [ ] FastAPI service with auth, multi-tenancy, rate limits and budgets
 - [ ] Tracing, a citation-aware UI, and a deployed demo

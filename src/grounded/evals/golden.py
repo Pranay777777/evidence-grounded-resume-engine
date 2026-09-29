@@ -48,6 +48,39 @@ class GoldenItem(BaseModel):
     note: str = ""
     labelled_by: str | None = None
     labelled_at: datetime | None = None
+    prompt_fingerprint: str = ""
+    """The registered prompt's hash (ADR-012); empty for items collected before it."""
+
+
+class RunRecord(BaseModel):
+    """One generation call during collection: what it cost, not what it said."""
+
+    model_config = ConfigDict(extra="forbid")
+    jd_id: str
+    model: str
+    requested: str
+    """The spec asked for; `model` is what the provider reports it ran."""
+    prompt_version: str
+    prompt_fingerprint: str
+    attempts: int
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    latency_s: float
+    bullets: int
+    at: datetime
+
+
+def read_runs(path: Path) -> list[RunRecord]:
+    if not path.exists():
+        return []
+    lines = path.read_text(encoding="utf-8").splitlines()
+    return [RunRecord.model_validate_json(line) for line in lines if line.strip()]
+
+
+def append_run(path: Path, run: RunRecord) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8", newline="\n") as out:
+        out.write(run.model_dump_json() + "\n")
 
 
 def item_id(jd_id: str, model: str, text: str) -> str:

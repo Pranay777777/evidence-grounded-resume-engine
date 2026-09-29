@@ -46,24 +46,26 @@ class OpenAICompatibleClient:
         max_retries: int = 3,
         transport: httpx.BaseTransport | None = None,
         sleep: Callable[[float], None] = time.sleep,
+        require_key: bool = True,
+        key_hint: str = "OPENROUTER_API_KEY (a free key from openrouter.ai/keys)",
+        attribution: bool = True,
     ) -> None:
-        if not api_key.get_secret_value():
-            raise LLMError(
-                "no API key — set OPENROUTER_API_KEY (a free key from openrouter.ai/keys)"
-            )
+        if require_key and not api_key.get_secret_value():
+            raise LLMError(f"no API key - set {key_hint}")
         self.model = model
         self.max_retries = max_retries
         self._sleep = sleep
+        headers = {}
+        if api_key.get_secret_value():
+            headers["Authorization"] = f"Bearer {api_key.get_secret_value()}"
+        if attribution:
+            # Optional attribution headers OpenRouter documents.
+            headers["HTTP-Referer"] = (
+                "https://github.com/Pranay777777/evidence-grounded-resume-engine"
+            )
+            headers["X-Title"] = "evidence-grounded-resume-engine"
         self._http = httpx.Client(
-            base_url=base_url,
-            timeout=timeout,
-            transport=transport,
-            headers={
-                "Authorization": f"Bearer {api_key.get_secret_value()}",
-                # Optional attribution headers OpenRouter documents.
-                "HTTP-Referer": "https://github.com/Pranay777777/evidence-grounded-resume-engine",
-                "X-Title": "evidence-grounded-resume-engine",
-            },
+            base_url=base_url, timeout=timeout, transport=transport, headers=headers
         )
 
     def complete(

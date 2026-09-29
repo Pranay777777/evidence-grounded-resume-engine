@@ -39,6 +39,20 @@ class Settings(BaseSettings):
     compare like with like, require a pinned model (ADR-007). List current
     candidates with `python -m grounded.generation models`."""
     openrouter_api_key: SecretStr = SecretStr("")
+    openai_api_key: SecretStr = SecretStr("")
+    """Only for `openai:<model>` specs (ADR-012)."""
+    ollama_base_url: str = "http://localhost:11434/v1"
+    """Only for `ollama:<model>` specs: a local model, no key, nothing leaves the machine."""
+
+    prompt_version: str = "generate-v1"
+    """The registered prompt drafts use (ADR-012); list them with
+    `python -m grounded.generation prompts`."""
+
+    semantic_cache_path: str = ".cache/semantic-cache.jsonl"
+    """Drafts reused for near-identical requests (ADR-013). Gitignored."""
+    cache_threshold: float = 0.95
+    """Cosine similarity of job descriptions needed for a cache hit. Provisional
+    until `python -m grounded.generation cache-bench` is run (ADR-013)."""
 
     verifier: Literal["nli-deberta"] = "nli-deberta"
     """The entailment model that decides which bullets survive (ADR-009)."""

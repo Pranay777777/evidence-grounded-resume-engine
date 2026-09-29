@@ -375,3 +375,98 @@ def test_the_default_model_is_the_free_router() -> None:
     from grounded.generation.llm import FREE_ROUTER
 
     assert Settings(_env_file=None).llm_model == FREE_ROUTER  # type: ignore[call-arg]
+
+
+# --- prompt registry (ADR-012) -------------------------------------------------
+
+PINNED = {"generate-v1": "7a4e4c0acb2b"}
+
+
+def test_registered_prompts_are_immutable() -> None:
+    fingerprints = {v: s.fingerprint for v, s in prompt.REGISTRY.items()}
+    assert fingerprints == PINNED, (
+        "a registered prompt's text changed - register a new version instead of editing it"
+    )
+
+
+def test_v1_messages_keep_their_original_layout(records: list[Evidence]) -> None:
+    system, user = prompt.messages("A data role.", records[:1], 20_000)
+    assert system == {"role": "system", "content": prompt.SYSTEM_V1}
+    assert user["content"] == (
+        f"<evidence>\n{prompt.evidence_block(records[:1])}\n</evidence>\n\n"
+        "<job_description>\nA data role.\n</job_description>\n\nWrite the bullets."
+    )
+
+
+def test_placeholders_inside_the_job_description_are_not_expanded(
+    records: list[Evidence],
+) -> None:
+    _, user = prompt.messages("Paste $evidence and ${job_description} here.", records[:1], 20_000)
+    assert "Paste $evidence and ${job_description} here." in user["content"]
+
+
+def test_an_unknown_prompt_version_names_the_known_ones() -> None:
+    with pytest.raises(
+        ValueError, match=r"unknown prompt version 'v9' \(registered: generate-v1\)"
+    ):
+        prompt.get("v9")
+
+
+def test_generation_records_prompt_and_summed_usage(records: list[Evidence]) -> None:
+    script = Scripted(
+        httpx.Response(200, json=tool_reply("{not json")),
+        httpx.Response(200, json=tool_reply(json.dumps(GOOD))),
+    )
+    result = generate(client(script), "jd", records, prompt_version="generate-v1")
+    assert result.prompt_version == "generate-v1"
+    assert result.prompt_fingerprint == PINNED["generate-v1"]
+    assert result.usage == {"prompt_tokens": 20, "completion_tokens": 10}
+
+
+# --- model adapters (ADR-012) ---------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("spec", "provider", "model"),
+    [
+        ("openrouter/free", "openrouter", "openrouter/free"),
+        ("google/gemma-4-31b-it:free", "openrouter", "google/gemma-4-31b-it:free"),
+        ("ollama:llama3.2", "ollama", "llama3.2"),
+        ("openai:some-model", "openai", "some-model"),
+        ("mystery:model", "openrouter", "mystery:model"),
+    ],
+)
+def test_specs_choose_the_provider(spec: str, provider: str, model: str) -> None:
+    from grounded.generation.adapters import parse
+
+    chosen, name = parse(spec)
+    assert (chosen.name, name) == (provider, model)
+
+
+def test_a_provider_without_a_model_is_an_error() -> None:
+    from grounded.generation.adapters import parse
+
+    with pytest.raises(ValueError, match="names a provider but no model"):
+        parse("ollama:")
+
+
+def test_clients_get_the_right_endpoint_key_and_headers() -> None:
+    from grounded.config import Settings
+    from grounded.generation.adapters import make_client
+
+    settings = Settings(openrouter_api_key=KEY, openai_api_key=SecretStr(""))
+    local = make_client("ollama:llama3.2", settings)
+    assert str(local._http.base_url).rstrip("/") == "http://localhost:11434/v1"
+    assert "authorization" not in local._http.headers and "x-title" not in local._http.headers
+    assert local.model == "llama3.2"
+
+    routed = make_client("openrouter/free", settings)
+    assert str(routed._http.base_url).startswith("https://openrouter.ai/api/v1")
+    assert routed._http.headers["authorization"] == "Bearer sk-or-test-secret"
+    assert routed._http.headers["x-title"] == "evidence-grounded-resume-engine"
+
+    with pytest.raises(LLMError, match="OPENAI_API_KEY"):
+        make_client("openai:some-model", settings)
+    direct = make_client("openai:some-model", Settings(openai_api_key=SecretStr("sk-x")))
+    assert str(direct._http.base_url).startswith("https://api.openai.com/v1")
+    assert "x-title" not in direct._http.headers

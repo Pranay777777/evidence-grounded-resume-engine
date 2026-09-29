@@ -16,18 +16,21 @@ skipped on the next run — a rerun spends quota only on what is missing.
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from grounded.evals.golden import GoldenItem, JobSet, item_id
+from grounded.evals.golden import GoldenItem, JobSet, RunRecord, item_id
 from grounded.evidence.models import Base, Evidence
 from grounded.evidence.store import load, read_file
 from grounded.generation.generate import ChatClient, GenerationError, generate
 from grounded.generation.llm import FREE_ROUTER, LLMError
+from grounded.generation.prompt import PROMPT_VERSION, get
 from grounded.retrieval.embedding import Embedder
 from grounded.retrieval.index import embed_pending
 from grounded.retrieval.search import search
@@ -64,12 +67,16 @@ def collect(
     skip: frozenset[str] = frozenset(),
     save: Callable[[list[GoldenItem]], None] = lambda items: None,
     progress: Callable[[str], None] = print,
+    prompt_version: str = PROMPT_VERSION,
+    log: Callable[[RunRecord], None] = lambda run: None,
+    clock: Callable[[], float] = time.perf_counter,
 ) -> Collection:
     if client.model == FREE_ROUTER:
         raise PinRequiredError(
             f"the golden set needs a pinned model, not '{FREE_ROUTER}' - pick one from "
             "`python -m grounded.generation models` and pass --model"
         )
+    fingerprint = get(prompt_version).fingerprint  # fail fast on an unknown version
     engine = create_engine("sqlite://")
     Base.metadata.create_all(engine)
     result = Collection()
@@ -88,8 +95,11 @@ def collect(
             hits = search(session, job.text, embedder, k=k)
             records = [session.get(Evidence, h.evidence_id) for h in hits]
             given = {r.id: r for r in records if r is not None}
+            started = clock()
             try:
-                generation = generate(client, job.text, list(given.values()))
+                generation = generate(
+                    client, job.text, list(given.values()), prompt_version=prompt_version
+                )
             except LLMError as exc:
                 streak += 1
                 result.failed.append(job.id)
@@ -101,12 +111,14 @@ def collect(
                 progress(f"  {job.id}: no draft ({exc})")
                 continue
             streak = 0
+            elapsed = clock() - started
             batch = [
                 GoldenItem(
                     id=item_id(job.id, generation.model, bullet.text),
                     jd_id=job.id,
                     model=generation.model,
                     prompt_version=generation.prompt_version,
+                    prompt_fingerprint=fingerprint,
                     text=bullet.text,
                     evidence_ids=list(bullet.evidence_ids),
                     premise=premise([given[i] for i in bullet.evidence_ids if i in given]),
@@ -115,6 +127,21 @@ def collect(
                 for bullet in generation.draft.bullets
             ]
             save(batch)
+            log(
+                RunRecord(
+                    jd_id=job.id,
+                    model=generation.model,
+                    requested=client.model,
+                    prompt_version=prompt_version,
+                    prompt_fingerprint=fingerprint,
+                    attempts=generation.attempts,
+                    prompt_tokens=generation.usage.get("prompt_tokens", 0),
+                    completion_tokens=generation.usage.get("completion_tokens", 0),
+                    latency_s=round(elapsed, 3),
+                    bullets=len(batch),
+                    at=datetime.now(UTC),
+                )
+            )
             result.items.extend(batch)
             result.done.append(job.id)
             progress(f"  {job.id}: {len(batch)} bullet(s) from {generation.model}")

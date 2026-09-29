@@ -53,6 +53,12 @@ class Generation:
     prompt_version: str = prompt.PROMPT_VERSION
     errors: list[str] = field(default_factory=list)
     """Validation errors from failed attempts, oldest first."""
+    usage: dict[str, int] = field(default_factory=dict)
+    """Token counts summed over every attempt, as the provider reported them."""
+
+    @property
+    def prompt_fingerprint(self) -> str:
+        return prompt.get(self.prompt_version).fingerprint
 
 
 def _payload(response: ChatResponse) -> str:
@@ -74,16 +80,20 @@ def generate(
     job_description: str,
     records: Sequence[Evidence],
     max_attempts: int = 3,
+    prompt_version: str = prompt.PROMPT_VERSION,
 ) -> Generation:
     """Ask for a draft; on a structural failure, show the model its errors and retry."""
     if not records:
         raise GenerationError("no citable evidence to generate from", [])
-    conversation = prompt.messages(job_description, records, MAX_QUERY_CHARS)
+    conversation = prompt.messages(job_description, records, MAX_QUERY_CHARS, prompt_version)
     errors: list[str] = []
+    usage: dict[str, int] = {}
     for attempt in range(1, max_attempts + 1):
         response = client.complete(
             conversation, tools=[prompt.draft_tool()], tool_choice=prompt.FORCE_TOOL
         )
+        for key, value in response.usage.items():
+            usage[key] = usage.get(key, 0) + value
         raw = _payload(response)
         try:
             draft = Draft.model_validate(json.loads(raw))
@@ -104,7 +114,12 @@ def generate(
             ]
             continue
         return Generation(
-            draft=draft, attempts=attempt, model=response.model or client.model, errors=errors
+            draft=draft,
+            attempts=attempt,
+            model=response.model or client.model,
+            prompt_version=prompt_version,
+            errors=errors,
+            usage=usage,
         )
     raise GenerationError(
         f"no valid draft after {max_attempts} attempts: output never matched the schema",

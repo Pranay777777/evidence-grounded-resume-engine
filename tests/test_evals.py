@@ -171,7 +171,10 @@ class FakeClient:
             {"text": "Ran Kubernetes clusters.", "evidence_ids": [cited, "made-up-record"]},
         ]
         return ChatResponse(
-            content=None, tool_arguments=json.dumps({"bullets": bullets}), model=self.model
+            content=None,
+            tool_arguments=json.dumps({"bullets": bullets}),
+            model=self.model,
+            usage={"prompt_tokens": 1000, "completion_tokens": 200},
         )
 
 
@@ -449,7 +452,7 @@ def workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]
     )
     monkeypatch.setattr(cli, "JOBS", jobs)
     monkeypatch.setattr(cli, "CORPUS", CORPUS)
-    monkeypatch.setattr(cli, "OpenAICompatibleClient", lambda key, model, url: FakeClient(model))
+    monkeypatch.setattr(cli, "make_client", lambda spec, settings: FakeClient(spec))
     monkeypatch.setattr(cli, "get_verifier", lambda name, cache_dir=None: Scripted())
     monkeypatch.setenv("EMBEDDER", "hashing")
     get_settings.cache_clear()
@@ -473,13 +476,11 @@ def test_cli_collect_then_collect_again_adds_nothing(
 def test_cli_collect_after_a_rate_limit_resumes(
     workspace: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    monkeypatch.setattr(
-        cli, "OpenAICompatibleClient", lambda key, model, url: FakeClient(model, limited=True)
-    )
+    monkeypatch.setattr(cli, "make_client", lambda spec, settings: FakeClient(spec, limited=True))
     assert cli.main(["collect", "--model", "pinned/model:free", "--out", str(workspace)]) == 1
     assert "1 job(s) not collected: j1" in capsys.readouterr().err
     assert not workspace.exists()
-    monkeypatch.setattr(cli, "OpenAICompatibleClient", lambda key, model, url: FakeClient(model))
+    monkeypatch.setattr(cli, "make_client", lambda spec, settings: FakeClient(spec))
     assert cli.main(["collect", "--model", "pinned/model:free", "--out", str(workspace)]) == 0
     assert len(read_items(workspace)) == 2
 
@@ -518,3 +519,132 @@ def test_cli_label_and_run(
     limits.write_text("max: {nonsense: 1}\n", encoding="utf-8")
     assert cli.main(["run", "--file", str(workspace), "--check", str(limits)]) == 2
     assert "not a numeric metric" in capsys.readouterr().err
+
+
+# -- prompt versions, run log, comparison (ADR-012) ------------------------------
+
+
+def test_collect_tags_items_and_logs_each_call() -> None:
+    from grounded.evals.golden import RunRecord
+
+    runs: list[RunRecord] = []
+    ticks = iter([10.0, 12.5, 20.0, 20.0])
+    result = collect(
+        CORPUS,
+        JOBS,
+        FakeClient(),
+        get_embedder("hashing"),
+        log=runs.append,
+        clock=lambda: next(ticks),
+    )
+    assert {i.prompt_fingerprint for i in result.items} == {"7a4e4c0acb2b"}
+    assert len(runs) == 1  # the broken job produced no draft, so no run record
+    run = runs[0]
+    assert (run.jd_id, run.model, run.requested) == ("j1", "pinned/model:free", "pinned/model:free")
+    assert (run.prompt_tokens, run.completion_tokens, run.latency_s, run.bullets) == (
+        1000,
+        200,
+        2.5,
+        2,
+    )
+
+
+def test_collect_rejects_an_unknown_prompt() -> None:
+    with pytest.raises(ValueError, match="unknown prompt version"):
+        collect(CORPUS, JOBS, FakeClient(), get_embedder("hashing"), prompt_version="v9")
+
+
+def test_runs_round_trip(tmp_path: Path) -> None:
+    from grounded.evals.golden import RunRecord, append_run, read_runs
+
+    assert read_runs(tmp_path / "runs.jsonl") == []
+    run = RunRecord(
+        jd_id="j",
+        model="m",
+        requested="m",
+        prompt_version="generate-v1",
+        prompt_fingerprint="fp",
+        attempts=1,
+        latency_s=1.0,
+        bullets=2,
+        at=datetime.now(UTC),
+    )
+    append_run(tmp_path / "runs.jsonl", run)
+    append_run(tmp_path / "runs.jsonl", run)
+    assert read_runs(tmp_path / "runs.jsonl") == [run, run]
+
+
+def test_unlabelled_bullets_can_be_gated_for_comparison() -> None:
+    items = [item("a"), item("b", text="Led the migration.", premise="Contributed to it.")]
+    report = evaluate(items, GOLDEN_JOBS, Scripted(), 0.95, CORPUS_TEXT, labelled_only=False)
+    assert (report.items, report.labelled, report.kept) == (2, 0, 1)
+    assert report.drop_reasons == {"claim strength": 1}
+    assert report.output_fabrication == 0.0 and report.prompts == ["generate-v1"]
+    assert evaluate(items, GOLDEN_JOBS, Scripted(), 0.95, CORPUS_TEXT).kept == 0
+
+
+def test_compare_and_its_report() -> None:
+    from grounded.evals.compare import compare
+    from grounded.evals.compare import markdown as comparison
+    from grounded.evals.golden import RunRecord
+
+    items = [
+        item("a", model="m/free:free"),
+        item("b", model="m/free:free", text="Led the migration.", premise="Contributed."),
+        item("c", model="paid/model", supported=True),
+    ]
+    runs = [
+        RunRecord(
+            jd_id="j1",
+            model="m/free:free",
+            requested="m/free:free",
+            prompt_version="generate-v1",
+            prompt_fingerprint="fp",
+            attempts=2,
+            prompt_tokens=900,
+            completion_tokens=100,
+            latency_s=3.0,
+            bullets=2,
+            at=datetime.now(UTC),
+        ),
+    ]
+    rows = compare(items, runs, GOLDEN_JOBS, Scripted(), 0.95, CORPUS_TEXT)
+    free, paid = rows
+    assert (free.model, free.jobs, free.report.kept, free.kept_rate) == ("m/free:free", 1, 1, 0.5)
+    assert (free.tokens_per_draft, free.latency_s, free.attempts, free.cost_per_draft) == (
+        1000,
+        3.0,
+        2,
+        0.0,
+    )
+    assert paid.tokens_per_draft is None and paid.cost_per_draft is None
+    text = comparison(rows, "scripted-nli", 0.95, 3)
+    assert "| m/free:free | 1 | 2 | 1 (50%) |" in text and "| 1,000 | 3.0 s | $0.00 |" in text
+    assert "| paid/model | 1 | 1 | 1 (100%) |" in text and "0% of kept (1 labelled)" in text
+    assert "| - | - | - |" in text
+    assert "- **m/free:free** - claim strength 1" in text
+    assert "- **paid/model** - nothing dropped" in text
+
+
+def test_cli_compare(workspace: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    assert cli.main(["compare", "--file", str(workspace)]) == 1
+    assert "collect first" in capsys.readouterr().err
+    cli.main(["collect", "--model", "pinned/model:free", "--out", str(workspace)])
+    assert (workspace.parent / "runs.jsonl").exists()
+    out = workspace.parent / "cmp.md"
+    assert cli.main(["compare", "--file", str(workspace), "--out", str(out)]) == 0
+    text = out.read_text(encoding="utf-8")
+    assert "| pinned/model:free | 1 | 2 |" in text and "| 1,200 |" in text
+
+
+def test_cli_collect_skips_per_prompt_version(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    cli.main(["collect", "--model", "pinned/model:free", "--out", str(workspace)])
+    assert (
+        cli.main(
+            ["collect", "--model", "pinned/model:free", "--prompt", "v9", "--out", str(workspace)]
+        )
+        == 1
+    )
+    assert "unknown prompt version" in capsys.readouterr().err

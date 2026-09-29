@@ -1,0 +1,128 @@
+# SYNTHETIC job-description pairs for the semantic-cache benchmark (ADR-013),
+# written against the fictional career in benchmarks/retrieval/corpus.yaml.
+# same: true  - one request, reformatted or rephrased: reusing the draft is right.
+# same: false - a different request: reusing the draft would serve the wrong one.
+pairs:
+  # --- the same request, reformatted --------------------------------------
+  - id: fmt-airflow
+    kind: format
+    same: true
+    a: "Data engineer to orchestrate batch pipelines with Airflow and model the warehouse in dbt."
+    b: "DATA ENGINEER to orchestrate batch pipelines with   Airflow and model the warehouse in dbt."
+  - id: fmt-streaming
+    kind: format
+    same: true
+    a: "Streaming engineer: Kafka ingestion, Spark Structured Streaming, low end-to-end latency."
+    b: "streaming engineer:\nKafka ingestion,\nSpark Structured Streaming,\nlow end-to-end latency."
+  - id: fmt-ml
+    kind: format
+    same: true
+    a: "ML engineer to train churn models, track experiments in MLflow and serve them with FastAPI."
+    b: "  ML engineer to train churn models, track experiments in MLflow and serve them with FastAPI.  "
+  - id: fmt-web
+    kind: format
+    same: true
+    a: "Full-stack developer for an internal staff portal in React and Django REST, with strong unit tests."
+    b: "Full-Stack Developer for an internal staff portal in React and Django REST, with strong unit tests."
+  # --- the same request, rephrased ----------------------------------------
+  - id: para-batch
+    kind: paraphrase
+    same: true
+    a: "We need a data engineer who builds Airflow DAGs for nightly loads and dbt models with tests."
+    b: "Looking for a data engineer to write Airflow DAGs for our nightly loads and build tested dbt models."
+  - id: para-quality
+    kind: paraphrase
+    same: true
+    a: "Own data quality: add validation checks that quarantine bad rows before they reach the warehouse."
+    b: "You will own data quality, adding checks that quarantine invalid rows before they land in the warehouse."
+  - id: para-streaming
+    kind: paraphrase
+    same: true
+    a: "Build real-time pipelines ingesting clickstream events from Kafka with Spark Structured Streaming."
+    b: "Build streaming pipelines that ingest clickstream data from Kafka using Spark Structured Streaming."
+  - id: para-rag
+    kind: paraphrase
+    same: true
+    a: "AI engineer to build retrieval-augmented support assistants with hybrid search and an evaluation set."
+    b: "AI engineer to build a RAG support assistant using hybrid keyword and vector search, with an eval set."
+  - id: para-mlops
+    kind: paraphrase
+    same: true
+    a: "MLOps engineer: register models in MLflow, monitor feature drift and alert on changes."
+    b: "MLOps engineer to register model versions in MLflow and set up feature-drift monitoring with alerts."
+  - id: para-platform
+    kind: paraphrase
+    same: true
+    a: "Platform engineer to provision data infrastructure with Terraform and write recovery runbooks."
+    b: "Platform engineer who provisions the data platform with Terraform and writes runbooks for recovery."
+  - id: para-privacy
+    kind: paraphrase
+    same: true
+    a: "Data engineer to implement GDPR erasure requests across every downstream table."
+    b: "Data engineer who will build the pipeline that propagates GDPR deletion requests to all downstream tables."
+  - id: para-cost
+    kind: paraphrase
+    same: true
+    a: "Reduce our Snowflake spend by right-sizing warehouses and tuning queries."
+    b: "Cut Snowflake costs by resizing warehouses and optimising queries."
+  # --- different requests ---------------------------------------------------
+  - id: diff-stack-batch
+    kind: different stack
+    same: false
+    a: "Data engineer to orchestrate batch pipelines with Airflow and model the warehouse in dbt."
+    b: "Data engineer to build streaming pipelines with Kafka and Spark Structured Streaming."
+  - id: diff-stack-web
+    kind: different stack
+    same: false
+    a: "Full-stack developer for a staff portal in React and Django REST."
+    b: "Backend developer to serve machine learning models behind FastAPI endpoints."
+  - id: diff-role-ml
+    kind: different role
+    same: false
+    a: "ML engineer to train and serve churn models."
+    b: "Data engineer to model sales facts and dimensions in dbt."
+  - id: diff-role-rag
+    kind: different role
+    same: false
+    a: "AI engineer to build a RAG support assistant with hybrid search."
+    b: "Analytics engineer to build dbt models and slowly changing dimensions."
+  - id: diff-focus-quality
+    kind: different focus
+    same: false
+    a: "Data engineer focused on data quality checks and quarantining bad rows."
+    b: "Data engineer focused on cutting Snowflake cost by resizing warehouses."
+  - id: diff-focus-streaming
+    kind: different focus
+    same: false
+    a: "Streaming engineer focused on reducing end-to-end event latency."
+    b: "Streaming engineer focused on sharing the on-call rotation and writing runbooks."
+  - id: diff-focus-ml
+    kind: different focus
+    same: false
+    a: "ML engineer focused on feature-drift monitoring and alerting."
+    b: "ML engineer focused on building a LightGBM churn classifier."
+  - id: diff-focus-security
+    kind: different focus
+    same: false
+    a: "AI engineer focused on prompt-injection defences for an assistant."
+    b: "AI engineer focused on evaluation sets and answer quality for an assistant."
+  - id: diff-lead
+    kind: different seniority ask
+    same: false
+    a: "Senior data engineer to mentor junior engineers and write team runbooks."
+    b: "Senior data engineer to provision cloud resources with Terraform."
+  - id: diff-privacy
+    kind: different focus
+    same: false
+    a: "Data engineer to implement GDPR erasure requests across downstream tables."
+    b: "Data engineer to implement slowly changing dimension type 2 history."
+  - id: diff-unrelated
+    kind: unrelated
+    same: false
+    a: "Data engineer to orchestrate batch pipelines with Airflow."
+    b: "Frontend developer to build React pages for leave requests."
+  - id: diff-unrelated-2
+    kind: unrelated
+    same: false
+    a: "Platform engineer to provision infrastructure with Terraform."
+    b: "Data scientist to train a churn classifier and report AUC."
