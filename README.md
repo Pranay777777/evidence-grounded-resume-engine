@@ -65,8 +65,8 @@ Filled in as each component ships — measured numbers only.
 | Fabrication rate | — | golden set ([ADR-010](docs/adr/0010-golden-set-and-evals.md)): tooling shipped, labelling in progress |
 | Citation precision / recall | — | golden set, labelling in progress |
 | Retrieval, hybrid bge-small + rerank | **Recall@1 0.80 · Recall@10 1.00 · MRR 0.97** (BM25 alone: 0.57 · 0.93 · 0.75) | [ablation](docs/results/retrieval-ablation.md) on a synthetic benchmark (`benchmarks/retrieval/`) — the real golden set is step 50 |
-| Model comparison | [3 models, same job descriptions](docs/results/model-comparison.md) | gate-kept rate, citation P/R, keyword coverage, tokens and latency per draft |
-| Semantic cache | [hit rate vs false hits](docs/results/semantic-cache.md) | 24 labelled job-description pairs, no model calls |
+| Model comparison | Kept by gate: Nemotron 57% · Poolside 49% · Cohere 43%; citation precision 90% · 49% · 74% ([table](docs/results/model-comparison.md)) | 3 free models, same 20 synthetic JDs and evidence, production gate |
+| Semantic cache | **50% hit rate on repeated requests, 0% false hits** at 0.90 ([benchmark](docs/results/semantic-cache.md)) | 24 labelled job-description pairs, `bge-small`, no model calls |
 | Improvement curve | [before/after per change](docs/results/improvement-curve.md) | each row from a committed result file |
 | Prompt-injection suite pass rate | — | OWASP LLM Top 10 mapping |
 

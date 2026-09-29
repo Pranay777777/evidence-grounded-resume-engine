@@ -41,6 +41,28 @@ and projects tokens and dollars saved from the tokens drafts really used
 (runs.jsonl). The threshold default (0.95) is provisional until that run;
 the result is `docs/results/semantic-cache.md`.
 
+## Amendment - threshold from the first benchmark run (2026-09-29)
+
+`cache-bench` with `bge-small` on the 24 pairs:
+
+| Threshold | Hit rate (similarity) | False hits (similarity) | Hit rate (+ same evidence) | False hits (+ same evidence) |
+|---|---|---|---|---|
+| 0.80 | 100% | 25% | 50% | 0% |
+| 0.85 | 100% | 17% | 50% | 0% |
+| **0.90** | 75% | **0%** | **50%** | **0%** |
+| 0.95 | 50% | 0% | 42% | 0% |
+| 0.97 | 33% | 0% | 33% | 0% |
+
+- **The evidence rule is what keeps hits correct**: with it, no threshold
+  produced a false hit. Similarity alone reaches 0% false hits at 0.90.
+- The default moves from the provisional 0.95 to **0.90** - the lowest
+  threshold where either safeguard alone would have prevented every false
+  hit - raising the hit rate on repeated requests from 42% to 50%.
+- The evidence rule costs hits: half the paraphrases retrieve a different
+  record set and miss. That is the intended trade (see Decision).
+- Caveat: 24 pairs, written by the author and evaluated in-sample. Savings
+  projected from real drafts: ~1,150 tokens per draft; $0 on free models.
+
 ## Consequences
 
 - The evidence rule is conservative: a paraphrase that retrieves even one

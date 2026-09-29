@@ -50,9 +50,10 @@ class Settings(BaseSettings):
 
     semantic_cache_path: str = ".cache/semantic-cache.jsonl"
     """Drafts reused for near-identical requests (ADR-013). Gitignored."""
-    cache_threshold: float = 0.95
-    """Cosine similarity of job descriptions needed for a cache hit. Provisional
-    until `python -m grounded.generation cache-bench` is run (ADR-013)."""
+    cache_threshold: float = 0.90
+    """Cosine similarity of job descriptions needed for a cache hit, set from
+    `cache-bench`: the lowest threshold with no false hits even on similarity
+    alone; with the evidence rule it hits 50% of repeated requests (ADR-013)."""
 
     verifier: Literal["nli-deberta"] = "nli-deberta"
     """The entailment model that decides which bullets survive (ADR-009)."""
