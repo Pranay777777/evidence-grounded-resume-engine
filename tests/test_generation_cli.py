@@ -17,7 +17,7 @@ from grounded.retrieval.__main__ import main as retrieval_main
 from grounded.verification.nli import Label, Verdict
 
 CORPUS = Path(__file__).parent / "fixtures" / "retrieval_corpus.yaml"
-FP = "7a4e4c0acb2b"  # the generate-v1 fingerprint, pinned in test_prompts.py
+FP = "edf48e8c9836"  # the generate-v2 fingerprint, pinned in test_generation.py
 
 
 class FakeClient:
@@ -70,7 +70,7 @@ def test_draft_prints_bullets_with_citations(
     assert cli.main(["draft", "--jd", str(store)]) == 0
     out = capsys.readouterr().out
     assert (
-        f"model fake/model | prompt generate-v1 ({FP}) | attempts 1 | verifier fake-nli ≥ 0.95"
+        f"model fake/model | prompt generate-v2 ({FP}) | attempts 1 | verifier fake-nli ≥ 0.95"
         in out
     )
     assert "✓ Implemented incremental loads with Delta Lake MERGE." in out

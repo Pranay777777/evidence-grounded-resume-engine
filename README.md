@@ -68,7 +68,7 @@ Filled in as each component ships — measured numbers only.
 | Model comparison | Kept by gate: Nemotron 57% · Poolside 49% · Cohere 43%; citation precision 90% · 49% · 74% ([table](docs/results/model-comparison.md)) | 3 free models, same 20 synthetic JDs and evidence, production gate |
 | Semantic cache | **50% hit rate on repeated requests, 0% false hits** at 0.90 ([benchmark](docs/results/semantic-cache.md)) | 24 labelled job-description pairs, `bge-small`, no model calls |
 | Improvement curve | [before/after per change](docs/results/improvement-curve.md) | each row from a committed result file |
-| Prompt-injection suite pass rate | — | OWASP LLM Top 10 mapping |
+| Prompt-injection suite pass rate | **100%** with `generate-v2` (v1: 94%) - [worst case, every payload assumed obeyed](docs/results/redteam.md) | 34 payloads mapped to OWASP LLM Top 10 2026; the gate must drop what a fully compromised model writes |
 
 ## Roadmap
 
@@ -84,8 +84,9 @@ Filled in as each component ships — measured numbers only.
 - [x] Eval harness — fabrication, gate errors, citation P/R, keyword coverage, tone; `--check` limits
 - [x] CI regression gate — `make eval` on every push, on frozen data, never calling an LLM ([ADR-011](docs/adr/0011-ci-regression-gate.md))
 - [x] Prompt registry ([ADR-012](docs/adr/0012-prompt-registry-and-model-adapters.md)), model adapters with a model comparison, and a semantic cache that still gates every draft ([ADR-013](docs/adr/0013-semantic-cache.md))
-- [ ] Prompt-injection red-team suite, PII redaction, local-model mode
-- [ ] FastAPI service with auth, multi-tenancy, rate limits and budgets
+- [x] Prompt-injection red team mapped to OWASP LLM Top 10 2026 ([ADR-014](docs/adr/0014-red-team-suite.md)), redaction before external calls and a local-only mode ([ADR-015](docs/adr/0015-redaction-and-local-mode.md))
+- [x] Generation API: API keys, per-key budgets, rate limits, circuit breaker ([ADR-016](docs/adr/0016-generation-api.md))
+- [ ] Auth and multi-tenancy
 - [ ] Tracing, a citation-aware UI, and a deployed demo
 
 ## Development

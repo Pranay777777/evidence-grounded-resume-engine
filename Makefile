@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install up down test lint format typecheck security serve migrate evidence index search ablate calibrate draft test-integration collect label eval compare cache-bench clean
+.PHONY: help install up down test lint format typecheck security serve migrate evidence index search ablate calibrate draft test-integration collect label eval compare cache-bench redteam keygen clean
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -70,12 +70,19 @@ label:  ## Label golden-set bullets (resumable): make label BY="Your Name"
 eval:  ## Regression gate (as CI runs it): verifier calibration, then the golden set once labelled
 	python -m grounded.verification calibrate benchmarks/verifier/pairs.yaml --out docs/results/verifier-calibration.md --max-false-accept 0 --max-false-reject 0
 	python -m grounded.evals run --out docs/results/eval.md --check benchmarks/golden/limits.yaml --skip-if-unlabelled
+	python -m grounded.evals redteam --out docs/results/redteam.md --min-pass 1.0
 
 compare:  ## Compare the models in the golden set -> docs/results/model-comparison.md
 	python -m grounded.evals compare --out docs/results/model-comparison.md
 
 cache-bench:  ## Measure the semantic cache (no model calls) -> docs/results/semantic-cache.md
 	python -m grounded.generation cache-bench benchmarks/cache/pairs.yaml --out docs/results/semantic-cache.md
+
+redteam:  ## Worst-case prompt-injection suite (no model calls) -> docs/results/redteam.md
+	python -m grounded.evals redteam --out docs/results/redteam.md
+
+keygen:  ## Create an API key: make keygen NAME=me
+	python -m grounded.api keygen $(NAME)
 
 clean:  ## Remove caches and build artefacts
 	rm -rf .pytest_cache .ruff_cache .mypy_cache htmlcov .coverage coverage.xml dist build

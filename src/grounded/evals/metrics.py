@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from grounded.evals.golden import GoldenItem, JobSet
 from grounded.retrieval.embedding import tokens
 from grounded.retrieval.search import STOPWORDS
+from grounded.verification.markup import markup
 from grounded.verification.nli import Label, Verdict, Verifier
 from grounded.verification.numbers import unsupported
 from grounded.verification.strength import escalations
@@ -44,6 +45,8 @@ def gate(item: GoldenItem, verifier: Verifier, threshold: float) -> Decision:
         return Decision(item, False, "unknown citation")
     if not item.premise:
         return Decision(item, False, "nothing cited")
+    if markup(item.text, [item.premise]):
+        return Decision(item, False, "markup")
     if unsupported(item.text, [item.premise], []):
         return Decision(item, False, "number")
     if escalations(item.text, [item.premise]):
@@ -139,7 +142,7 @@ def evaluate(
     report.false_accepts = [d.item.id for d in unsupported_all if d.kept]
     for d in decisions:
         if not d.kept:
-            fixed = {"unknown citation", "nothing cited", "number", "claim strength"}
+            fixed = {"unknown citation", "nothing cited", "markup", "number", "claim strength"}
             key = d.reason if d.reason in fixed else d.reason.split(" ")[0]
             report.drop_reasons[key] = report.drop_reasons.get(key, 0) + 1
 

@@ -124,7 +124,7 @@ jobs:
       - run: make eval
       - name: Publish the results to the job summary
         if: always()
-        run: cat docs/results/verifier-calibration.md docs/results/eval.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+        run: cat docs/results/verifier-calibration.md docs/results/redteam.md docs/results/eval.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
 
   security:
     name: Security

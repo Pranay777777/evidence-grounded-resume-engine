@@ -21,22 +21,19 @@ import sys
 from pathlib import Path
 
 import httpx
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
 from grounded.config import get_settings
 from grounded.evals.golden import read_runs
-from grounded.evidence.models import Evidence, Project
 from grounded.generation import cache_bench, prompt
 from grounded.generation.adapters import make_client
-from grounded.generation.cache import SemanticCache, request_key
-from grounded.generation.generate import Generation, GenerationError, generate
+from grounded.generation.cache import SemanticCache
+from grounded.generation.generate import GenerationError
 from grounded.generation.llm import FREE_ROUTER, LLMError, free_tool_models
+from grounded.generation.service import create_draft
 from grounded.migrate import ensure_schema
 from grounded.retrieval.embedding import get_embedder
-from grounded.retrieval.rerank import get_reranker
-from grounded.retrieval.search import search
-from grounded.verification.grounding import ground
 from grounded.verification.nli import get_verifier
 
 
@@ -126,64 +123,36 @@ def main(argv: list[str] | None = None) -> int:
     engine = create_engine(settings.database_url)
     ensure_schema(engine)
     with Session(engine) as session:
-        reranker = get_reranker("minilm") if args.rerank else None
-        hits = search(session, job, get_embedder(settings.embedder), k=args.k, reranker=reranker)
-        ids = [h.evidence_id for h in hits]
-        loaded = session.scalars(
-            select(Evidence)
-            .where(Evidence.id.in_(ids))
-            .options(
-                selectinload(Evidence.project).selectinload(Project.role),
-                selectinload(Evidence.role),
-            )
-        ).all()
-        by_id = {r.id: r for r in loaded}
-        records = [by_id[i] for i in ids]
-        version = args.prompt or settings.prompt_version
-        cache = key = None
-        hit_note = ""
         try:
-            fingerprint = prompt.get(version).fingerprint
             verifier = (
                 None
                 if args.unverified
                 else get_verifier(settings.verifier, cache_dir=settings.model_cache_dir)
             )
-            if args.cache:
-                cache = SemanticCache(
-                    Path(settings.semantic_cache_path),
-                    get_embedder(settings.embedder),
-                    settings.cache_threshold,
-                )
-                key = request_key(
-                    settings.llm_model, fingerprint, [(r.id, r.revision) for r in records]
-                )
-                hit = cache.lookup(key, job)
-            else:
-                hit = None
-            if hit is not None:
-                result = Generation(
-                    draft=hit.entry.draft,
-                    attempts=0,
-                    model=hit.entry.model,
-                    prompt_version=hit.entry.prompt_version,
-                )
-                hit_note = f" | cache hit (similarity {hit.similarity:.3f})"
-            else:
-                client = make_client(settings.llm_model, settings)
-                result = generate(client, job, records, prompt_version=version)
-                if cache is not None and key is not None:
-                    tokens = result.usage.get("prompt_tokens", 0) + result.usage.get(
-                        "completion_tokens", 0
-                    )
-                    cache.store(key, job, result.draft, result.model, version, tokens)
+            outcome = create_draft(
+                session,
+                job,
+                settings,
+                make_client,
+                verifier,
+                k=args.k,
+                rerank=args.rerank,
+                prompt_version=args.prompt,
+                use_cache=args.cache,
+            )
         except (LLMError, GenerationError, ValueError) as exc:
             print(f"error: {exc}", file=sys.stderr)
             for detail in getattr(exc, "errors", []):
                 print(f"  {detail}", file=sys.stderr)
             return 1
-        candidates = {r.id: r.revision for r in records}
-        report = ground(session, result.draft, candidates, verifier, settings.verifier_threshold)
+    result, report = outcome.generation, outcome.report
+    hit_note = (
+        f" | cache hit (similarity {outcome.cache_similarity:.3f})"
+        if outcome.cache_similarity is not None
+        else ""
+    )
+    if result.redacted:
+        hit_note += f" | {result.redacted} span(s) redacted before sending"
 
     if args.json:
         print(
@@ -192,7 +161,8 @@ def main(argv: list[str] | None = None) -> int:
                     "model": result.model,
                     "prompt_version": result.prompt_version,
                     "prompt_fingerprint": result.prompt_fingerprint,
-                    "cache_hit": bool(hit_note),
+                    "cache_hit": outcome.cache_similarity is not None,
+                    "redacted": result.redacted,
                     "attempts": result.attempts,
                     "verifier": report.verifier,
                     "threshold": report.threshold,

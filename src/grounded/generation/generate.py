@@ -21,6 +21,7 @@ from pydantic import ValidationError
 from grounded.evidence.models import Evidence
 from grounded.generation import prompt
 from grounded.generation.llm import ChatResponse
+from grounded.generation.privacy import Redaction
 from grounded.generation.schema import Draft
 from grounded.retrieval.search import MAX_QUERY_CHARS
 
@@ -55,6 +56,8 @@ class Generation:
     """Validation errors from failed attempts, oldest first."""
     usage: dict[str, int] = field(default_factory=dict)
     """Token counts summed over every attempt, as the provider reported them."""
+    redacted: int = 0
+    """Distinct spans replaced by placeholders before the request left (step 58)."""
 
     @property
     def prompt_fingerprint(self) -> str:
@@ -81,11 +84,18 @@ def generate(
     records: Sequence[Evidence],
     max_attempts: int = 3,
     prompt_version: str = prompt.PROMPT_VERSION,
+    redaction: Redaction | None = None,
 ) -> Generation:
     """Ask for a draft; on a structural failure, show the model its errors and retry."""
     if not records:
         raise GenerationError("no citable evidence to generate from", [])
-    conversation = prompt.messages(job_description, records, MAX_QUERY_CHARS, prompt_version)
+    conversation = prompt.messages(
+        job_description,
+        records,
+        MAX_QUERY_CHARS,
+        prompt_version,
+        redact=redaction.redact if redaction else (lambda text: text),
+    )
     errors: list[str] = []
     usage: dict[str, int] = {}
     for attempt in range(1, max_attempts + 1):
@@ -113,6 +123,12 @@ def generate(
                 },
             ]
             continue
+        if redaction is not None:
+            draft = Draft(
+                bullets=[
+                    b.model_copy(update={"text": redaction.restore(b.text)}) for b in draft.bullets
+                ]
+            )
         return Generation(
             draft=draft,
             attempts=attempt,
@@ -120,6 +136,7 @@ def generate(
             prompt_version=prompt_version,
             errors=errors,
             usage=usage,
+            redacted=redaction.redacted if redaction else 0,
         )
     raise GenerationError(
         f"no valid draft after {max_attempts} attempts: output never matched the schema",

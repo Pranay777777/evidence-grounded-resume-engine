@@ -65,8 +65,24 @@ def base_url(provider: Provider, settings: Settings) -> str:
     return BASE_URLS[provider.name]
 
 
+LOCAL_PROVIDERS = frozenset({"ollama"})
+
+
+def is_local(spec: str) -> bool:
+    return parse(spec)[0].name in LOCAL_PROVIDERS
+
+
+class LocalOnlyError(ValueError):
+    pass
+
+
 def make_client(spec: str, settings: Settings, **kwargs: Any) -> OpenAICompatibleClient:
     provider, model = parse(spec)
+    if settings.local_only and provider.name not in LOCAL_PROVIDERS:
+        raise LocalOnlyError(
+            f"LOCAL_ONLY is set: '{spec}' would send evidence off this machine - "
+            "use an ollama:<model> spec"
+        )
     key = getattr(settings, provider.key_setting) if provider.key_setting else SecretStr("")
     return OpenAICompatibleClient(
         key,
@@ -75,5 +91,6 @@ def make_client(spec: str, settings: Settings, **kwargs: Any) -> OpenAICompatibl
         require_key=provider.key_setting is not None,
         key_hint=provider.key_hint,
         attribution=provider.attribution,
+        max_tokens=settings.llm_max_tokens,
         **kwargs,
     )

@@ -49,10 +49,14 @@ class OpenAICompatibleClient:
         require_key: bool = True,
         key_hint: str = "OPENROUTER_API_KEY (a free key from openrouter.ai/keys)",
         attribution: bool = True,
+        max_tokens: int = 2000,
     ) -> None:
         if require_key and not api_key.get_secret_value():
             raise LLMError(f"no API key - set {key_hint}")
         self.model = model
+        self.max_tokens = max_tokens
+        """Caps every completion: one request can never cost more than this many
+        output tokens (OWASP LLM06:2026, unbounded consumption)."""
         self.max_retries = max_retries
         self._sleep = sleep
         headers = {}
@@ -79,6 +83,7 @@ class OpenAICompatibleClient:
             "model": self.model,
             "messages": messages,
             "temperature": temperature,
+            "max_tokens": self.max_tokens,
         }
         if tools:
             body["tools"] = tools

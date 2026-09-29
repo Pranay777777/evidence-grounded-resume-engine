@@ -6,6 +6,8 @@ python -m grounded.evals label --by "Your Name" [--file benchmarks/golden/golden
 python -m grounded.evals run [--file benchmarks/golden/golden.jsonl] [--out docs/results/eval.md]
                              [--check benchmarks/golden/limits.yaml]
 python -m grounded.evals compare [--out docs/results/model-comparison.md]
+python -m grounded.evals redteam [--out docs/results/redteam.md] [--min-pass 1.0]
+python -m grounded.evals redteam --live --model <pinned-id> [--out docs/results/redteam-live.md]
 
 --model takes an adapter spec (ADR-012): an OpenRouter id, ollama:<model> or openai:<model>.
 Each collection call is logged to runs.jsonl beside the golden set (tokens, latency).
@@ -20,6 +22,7 @@ from pathlib import Path
 import yaml
 
 from grounded.config import get_settings
+from grounded.evals import redteam
 from grounded.evals.collect import PinRequiredError, collect, same_model
 from grounded.evals.compare import compare
 from grounded.evals.compare import markdown as comparison_markdown
@@ -43,6 +46,7 @@ from grounded.verification.nli import get_verifier
 GOLDEN = Path("benchmarks/golden/golden.jsonl")
 JOBS = Path("benchmarks/golden/jds.yaml")
 CORPUS = Path("benchmarks/retrieval/corpus.yaml")
+PAYLOADS = Path("benchmarks/redteam/payloads.yaml")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -68,6 +72,12 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="exit 0 (not 1) when nothing is labelled yet - for CI before labelling is done",
     )
+    red = sub.add_parser("redteam", help="prompt-injection red team (OWASP LLM Top 10 2026)")
+    red.add_argument("--payloads", type=Path, default=PAYLOADS)
+    red.add_argument("--live", action="store_true", help="send the payloads to a real model")
+    red.add_argument("--model", help="pinned model spec for --live")
+    red.add_argument("--min-pass", type=float, help="exit 1 below this offline pass rate")
+    red.add_argument("--out", type=Path)
     cmp = sub.add_parser("compare", help="compare the models in the golden set")
     cmp.add_argument("--file", type=Path, default=GOLDEN)
     cmp.add_argument("--out", type=Path)
@@ -119,6 +129,52 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
         return 0 if result.items or not result.failed else 1
+
+    if args.command == "redteam":
+        payloads = redteam.read_payloads(args.payloads)
+        verifier = get_verifier(settings.verifier, cache_dir=settings.model_cache_dir)
+        if args.live:
+            if not args.model:
+                print("error: --live needs --model <pinned-id>", file=sys.stderr)
+                return 2
+            try:
+                client = make_client(args.model, settings)
+            except (LLMError, ValueError) as exc:
+                print(f"error: {exc}", file=sys.stderr)
+                return 1
+            results = redteam.run_live(
+                payloads,
+                CORPUS,
+                client,
+                get_embedder(settings.embedder),
+                verifier,
+                settings.verifier_threshold,
+            )
+            text = redteam.live_markdown(results, args.model, settings.verifier_threshold)
+        else:
+            outcomes = redteam.run_offline(payloads, CORPUS, verifier, settings.verifier_threshold)
+            text = redteam.markdown(
+                outcomes, verifier.name, settings.verifier_threshold, settings.prompt_version
+            )
+        print(text)
+        if args.out:
+            args.out.parent.mkdir(parents=True, exist_ok=True)
+            args.out.write_text(text, encoding="utf-8", newline="\n")
+        if not args.live and args.min_pass is not None:
+            rate = redteam.pass_rate(outcomes, settings.prompt_version)
+            if rate < args.min_pass:
+                failed = [
+                    o.payload.id
+                    for o in outcomes
+                    if not o.passed and o.version in (None, settings.prompt_version)
+                ]
+                print(
+                    f"REGRESSION: red-team pass rate {rate:.0%} < {args.min_pass:.0%}: "
+                    f"{', '.join(failed)}",
+                    file=sys.stderr,
+                )
+                return 1
+        return 0
 
     if args.command == "label":
         done, left = label(args.file, jobs, args.by, ask=input)

@@ -16,6 +16,7 @@ dependencies = [
   "python-multipart>=0.0.18",
   "pgvector>=0.3",
   "httpx>=0.28",
+  "slowapi>=0.1.9",
 ]
 
 [project.optional-dependencies]
@@ -28,6 +29,11 @@ dev = [
   "pip-audit>=2.10.1",
   "types-PyYAML>=6.0",
   "httpx2>=2.13",
+]
+
+# PII redaction with Presidio (ADR-015); also: python -m spacy download en_core_web_sm
+privacy = [
+  "presidio-analyzer>=2.2",
 ]
 
 # The dense embedding model (ADR-004): ONNX via fastembed, no PyTorch.
@@ -70,7 +76,8 @@ show_error_codes = true
 files = ["src", "tests"]
 
 [[tool.mypy.overrides]]
-module = ["fastembed.*", "onnxruntime.*", "huggingface_hub.*", "tokenizers.*", "numpy.*"]
+module = ["fastembed.*", "onnxruntime.*", "huggingface_hub.*", "tokenizers.*", "numpy.*",
+          "presidio_analyzer.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

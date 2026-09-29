@@ -31,6 +31,7 @@ from sqlalchemy.orm import Session
 
 from grounded.evidence.models import Evidence
 from grounded.generation.schema import Bullet, Draft
+from grounded.verification.markup import markup
 from grounded.verification.nli import Label, Verifier
 from grounded.verification.numbers import unsupported
 from grounded.verification.strength import escalations
@@ -120,6 +121,13 @@ def ground(
             continue
 
         facts = [r.statement for r in records] + [r.month for r in records if r.month]
+        formatting = markup(bullet.text, facts)
+        if formatting:
+            report.dropped.append(
+                Dropped(bullet, f"contains {', '.join(formatting)} - bullets are plain text")
+            )
+            continue
+
         extra = unsupported(bullet.text, facts, [r.metric_value for r in records])
         if extra:
             stated = ", ".join(sorted(format(n, "f") for n in extra))

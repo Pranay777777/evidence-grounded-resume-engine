@@ -16,7 +16,8 @@ talked into (steps 48 and 49), and step 57 red-teams this prompt.
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Sequence
+import re
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from string import Template
 from typing import Any
@@ -25,7 +26,7 @@ from grounded.evidence.models import Evidence
 from grounded.generation.schema import Draft
 from grounded.retrieval.chunking import document_text
 
-PROMPT_VERSION = "generate-v1"
+PROMPT_VERSION = "generate-v2"
 """The default version; override with PROMPT_VERSION in .env or --prompt."""
 
 SYSTEM_V1 = """You write résumé bullets for one candidate, using ONLY the evidence records provided.
@@ -60,11 +61,27 @@ class PromptSpec:
     """A string.Template: $evidence and $job_description are substituted once, so
     text inside the (untrusted) job description is never expanded."""
     notes: str = ""
+    sanitise: bool = False
+    """Neutralise fence tags and strip invisible characters in untrusted text (v2+)."""
 
     @property
     def fingerprint(self) -> str:
         text = f"{self.version}\x00{self.system}\x00{self.user}"
+        if self.sanitise:
+            text += "\x00sanitise"
         return hashlib.sha256(text.encode()).hexdigest()[:12]
+
+
+_FENCE_TAG = re.compile(r"<(\s*/?\s*)(job_description|evidence|record)\b", re.IGNORECASE)
+_INVISIBLE = re.compile("[\u200b-\u200f\u2060-\u2064\ufeff\U000e0000-\U000e007f\ufe00-\ufe0f]")
+
+
+def sanitise(text: str) -> str:
+    """Make untrusted text unable to close or open a prompt fence, and drop
+    characters a human reviewer cannot see (zero-width, Unicode tag block,
+    variation selectors) - both OWASP LLM01:2026 techniques. The step 57
+    red-team suite shows v1 fails both."""
+    return _FENCE_TAG.sub(lambda m: f"&lt;{m.group(1)}{m.group(2)}", _INVISIBLE.sub("", text))
 
 
 REGISTRY: dict[str, PromptSpec] = {
@@ -75,6 +92,13 @@ REGISTRY: dict[str, PromptSpec] = {
             SYSTEM_V1,
             USER_V1,
             notes="Evidence-only rules, fenced untrusted JD, forced emit_draft tool call.",
+        ),
+        PromptSpec(
+            "generate-v2",
+            SYSTEM_V1,
+            USER_V1,
+            notes="v1 + fence-tag neutralising and invisible-character stripping (red team).",
+            sanitise=True,
         ),
     )
 }
@@ -88,10 +112,12 @@ def get(version: str) -> PromptSpec:
         raise ValueError(f"unknown prompt version '{version}' (registered: {known})") from None
 
 
-def evidence_block(records: Sequence[Evidence]) -> str:
+def evidence_block(
+    records: Sequence[Evidence], transform: Callable[[str], str] = lambda text: text
+) -> str:
     parts = []
     for record in records:
-        body = document_text(record).replace("\n", " | ")
+        body = transform(document_text(record).replace("\n", " | "))
         parts.append(f'<record id="{record.id}">{body}</record>')
     return "\n".join(parts)
 
@@ -101,10 +127,15 @@ def messages(
     records: Sequence[Evidence],
     max_chars: int,
     version: str = PROMPT_VERSION,
+    redact: Callable[[str], str] = lambda text: text,
 ) -> list[dict[str, Any]]:
+    """`redact` rewrites the text the provider sees (step 58); record IDs are
+    never passed through it, so citations still resolve."""
     spec = get(version)
+    clean: Callable[[str], str] = sanitise if spec.sanitise else (lambda text: text)
     user = Template(spec.user).substitute(
-        evidence=evidence_block(records), job_description=job_description[:max_chars]
+        evidence=evidence_block(records, lambda text: redact(clean(text))),
+        job_description=redact(clean(job_description[:max_chars])),
     )
     return [{"role": "system", "content": spec.system}, {"role": "user", "content": user}]
 

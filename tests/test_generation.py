@@ -379,7 +379,7 @@ def test_the_default_model_is_the_free_router() -> None:
 
 # --- prompt registry (ADR-012) -------------------------------------------------
 
-PINNED = {"generate-v1": "7a4e4c0acb2b"}
+PINNED = {"generate-v1": "7a4e4c0acb2b", "generate-v2": "edf48e8c9836"}
 
 
 def test_registered_prompts_are_immutable() -> None:
@@ -407,7 +407,7 @@ def test_placeholders_inside_the_job_description_are_not_expanded(
 
 def test_an_unknown_prompt_version_names_the_known_ones() -> None:
     with pytest.raises(
-        ValueError, match=r"unknown prompt version 'v9' \(registered: generate-v1\)"
+        ValueError, match=r"unknown prompt version 'v9' \(registered: generate-v1, generate-v2\)"
     ):
         prompt.get("v9")
 

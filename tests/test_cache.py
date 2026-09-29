@@ -245,7 +245,7 @@ def test_prompts_lists_the_registry(capsys: pytest.CaptureFixture[str]) -> None:
     get_settings.cache_clear()
     assert cli.main(["prompts"]) == 0
     out = capsys.readouterr().out
-    assert "generate-v1" in out and "7a4e4c0acb2b  (default)" in out
+    assert "generate-v1" in out and "edf48e8c9836  (default)" in out
 
 
 def test_cache_bench_writes_its_report(

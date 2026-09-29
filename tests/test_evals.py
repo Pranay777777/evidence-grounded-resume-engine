@@ -207,7 +207,7 @@ def test_collect_keeps_every_bullet_ungated_with_its_premise() -> None:
     assert saved == [items]  # saved per job, as soon as it arrives
     assert (result.done, result.failed, result.stopped) == (["j1"], ["j2"], False)
     faithful, invented = items
-    assert faithful.model == "pinned/model:free" and faithful.prompt_version == "generate-v1"
+    assert faithful.model == "pinned/model:free" and faithful.prompt_version == "generate-v2"
     assert faithful.evidence_ids == ["ex-delta-merge"] and faithful.unknown_ids == []
     assert faithful.premise.startswith("Implemented incremental loads with Delta Lake MERGE.")
     assert "This was part of the Example lakehouse project." in faithful.premise
@@ -537,7 +537,7 @@ def test_collect_tags_items_and_logs_each_call() -> None:
         log=runs.append,
         clock=lambda: next(ticks),
     )
-    assert {i.prompt_fingerprint for i in result.items} == {"7a4e4c0acb2b"}
+    assert {i.prompt_fingerprint for i in result.items} == {"edf48e8c9836"}
     assert len(runs) == 1  # the broken job produced no draft, so no run record
     run = runs[0]
     assert (run.jd_id, run.model, run.requested) == ("j1", "pinned/model:free", "pinned/model:free")

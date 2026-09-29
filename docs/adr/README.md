@@ -21,3 +21,6 @@ accident.
 | [011](0011-ci-regression-gate.md) | CI re-measures the gate on frozen data and fails on regression |
 | [012](0012-prompt-registry-and-model-adapters.md) | Versioned prompts in a registry; models behind one adapter spec |
 | [013](0013-semantic-cache.md) | A semantic cache that cannot weaken grounding |
+| [014](0014-red-team-suite.md) | A red-team suite that assumes the model is fooled |
+| [015](0015-redaction-and-local-mode.md) | Redact before any external call; a fully local mode |
+| [016](0016-generation-api.md) | A generation API with keys, budgets and a circuit breaker |

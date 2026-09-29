@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import SecretStr
@@ -44,12 +45,37 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434/v1"
     """Only for `ollama:<model>` specs: a local model, no key, nothing leaves the machine."""
 
-    prompt_version: str = "generate-v1"
+    api_keys: str = ""
+    """`name=sha256:daily_tokens,...` - hashes only; make one with
+    `python -m grounded.api keygen <name>` (ADR-016)."""
+    rate_limit: str = "10/minute"
+    """Per API key on POST /v1/drafts (slowapi syntax)."""
+    circuit_failures: int = 3
+    """Consecutive provider failures that open the circuit breaker."""
+    circuit_cooldown_s: float = 60.0
+
+    llm_max_tokens: int = 2000
+    """Output-token cap per call (ADR-014): a draft of at most 8 bullets of at most
+    300 characters needs far less; the cap bounds what a hostile JD can cost."""
+    local_only: bool = False
+    """Refuse every provider that is not on this machine (`ollama:`) - the fully
+    local mode (ADR-015)."""
+    redaction: Literal["off", "patterns", "presidio"] = "patterns"
+    """What is redacted before a request goes to a non-local provider (ADR-015)."""
+    redact_terms: str = ""
+    """Comma-separated names to always redact - employers, clients, products."""
+
+    prompt_version: str = "generate-v2"
     """The registered prompt drafts use (ADR-012); list them with
     `python -m grounded.generation prompts`."""
 
     semantic_cache_path: str = ".cache/semantic-cache.jsonl"
     """Drafts reused for near-identical requests (ADR-013). Gitignored."""
+
+    @property
+    def semantic_cache_path_obj(self) -> Path:
+        return Path(self.semantic_cache_path)
+
     cache_threshold: float = 0.90
     """Cosine similarity of job descriptions needed for a cache hit, set from
     `cache-bench`: the lowest threshold with no false hits even on similarity
