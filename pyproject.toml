@@ -1,10 +1,10 @@
 [project]
 name = "grounded"
-version = "1.0.0"
+version = "1.0.1"
 description = "Resume generation where every claim cites verified evidence, with a measured fabrication rate"
 requires-python = ">=3.11"
 dependencies = [
-  "pydantic>=2.13.5",
+  "pydantic>=2.11.10",
   "pydantic-settings>=2.2",
   "sqlalchemy>=2.0",
   "alembic>=1.14",

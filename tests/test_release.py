@@ -22,11 +22,16 @@ REPORT = """# Evaluation - golden set
 """
 
 
+# Pre-release copies (as of the commit before "release: v1.0.0"): the live
+# files are finalised now, so the tests must not depend on them.
+TEMPLATES = Path(__file__).parent / "fixtures" / "release"
+
+
 @pytest.fixture
 def repo(tmp_path: Path) -> Path:
     for name in ("README.md", "CHANGELOG.md", "docs/releases/v1.0.0.md"):
         (tmp_path / name).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(name, tmp_path / name)
+        shutil.copy(TEMPLATES / Path(name).name, tmp_path / name)
     (tmp_path / "docs/results").mkdir(parents=True)
     return tmp_path
 

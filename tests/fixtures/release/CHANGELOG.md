@@ -6,14 +6,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [1.0.1] - 2026-10-01
-
-### Fixed
-- The Hugging Face Space build: the pydantic floor is now 2.11.10 (was 2.13.5),
-  so the package installs beside Gradio 6.29, which caps pydantic at 2.12.5.
-  Tests pass on pydantic 2.12.5; no code changed (ADR-020).
-
-## [1.0.0] - 2026-10-01
+## [1.0.0] - RELEASE_DATE
 
 First release - see [docs/releases/v1.0.0.md](docs/releases/v1.0.0.md).
 
@@ -32,6 +25,5 @@ First release - see [docs/releases/v1.0.0.md](docs/releases/v1.0.0.md).
 - Draft UI with inline citations, evidence on hover and a base-vs-tailored diff (ADR-019).
 - Public read-only demo on Hugging Face Spaces (ADR-020).
 
-[Unreleased]: https://github.com/Pranay777777/evidence-grounded-resume-engine/compare/v1.0.1...HEAD
-[1.0.1]: https://github.com/Pranay777777/evidence-grounded-resume-engine/releases/tag/v1.0.1
+[Unreleased]: https://github.com/Pranay777777/evidence-grounded-resume-engine/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/Pranay777777/evidence-grounded-resume-engine/releases/tag/v1.0.0

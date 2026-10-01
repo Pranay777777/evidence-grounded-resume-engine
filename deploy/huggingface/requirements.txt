@@ -1,1 +1,1 @@
-grounded[embeddings] @ git+https://github.com/Pranay777777/evidence-grounded-resume-engine@v1.0.0
+grounded[embeddings] @ git+https://github.com/Pranay777777/evidence-grounded-resume-engine@v1.0.1
