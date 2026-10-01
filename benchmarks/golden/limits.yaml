@@ -1,7 +1,11 @@
-# Regression limits for `python -m grounded.evals run --check` (step 52's CI gate).
-# TARGETS, not measurements: they encode the project's claim (few fabrications
-# reach the reader) and are re-set from the first labelled run — see ADR-010.
+# Regression limits for `python -m grounded.evals run --check` (ADR-010, ADR-011).
+# Set from the first labelled run (110 bullets): output fabrication 0%, gate
+# false accept 0%, gate false reject 38%. Zero tolerance where the run was
+# zero - a gate change that lets one fabricated bullet through must fail CI -
+# and a small margin on false reject, which can move by a bullet when the NLI
+# model's scores shift slightly across platforms.
 # Metric names are fields of grounded.evals.metrics.Report; values are 0..1.
 max:
-  output_fabrication: 0.05
-  false_accept: 0.10
+  output_fabrication: 0.0
+  false_accept: 0.0
+  false_reject: 0.40

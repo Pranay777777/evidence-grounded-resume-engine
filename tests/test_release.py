@@ -17,6 +17,8 @@ REPORT = """# Evaluation - golden set
 |---|---|
 | **Output fabrication rate** (unsupported among kept) | **{out}** |
 | Raw fabrication rate (before the gate) | {raw} |
+| Gate false accept | 0% |
+| Bullets kept | {kept} of {n} |
 """
 
 
@@ -29,8 +31,9 @@ def repo(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def write(repo: Path, n: int, out: str = "4%", raw: str = "21%") -> None:
-    (repo / "docs/results/eval.md").write_text(REPORT.format(n=n, out=out, raw=raw), "utf-8")
+def write(repo: Path, n: int, out: str = "4%", raw: str = "21%", kept: int = 50) -> None:
+    text = REPORT.format(n=n, out=out, raw=raw, kept=kept)
+    (repo / "docs/results/eval.md").write_text(text, "utf-8")
 
 
 URL = "https://huggingface.co/spaces/someone/evidence-grounded-resume-engine"
@@ -40,16 +43,17 @@ def test_placeholders_are_filled_from_the_report(repo: Path) -> None:
     write(repo, 120)
     measured = finalise(URL, repo, today="2026-10-05")
     assert (measured.labelled, measured.output, measured.raw) == (120, "4%", "21%")
+    assert (measured.kept, measured.unsupported_kept) == (50, 2)
     readme = (repo / "README.md").read_text("utf-8")
     assert f"<{URL}>" in readme and "DEMO_URL" not in readme
     assert (
-        "| Fabrication rate (output) | **4%** of kept bullets unsupported (before the gate: 21%)"
-        in readme
+        "| Fabrication rate (output) | **4%** of kept bullets unsupported "
+        "(2 of 50; 95% upper bound 13%) - before the gate: 21%" in readme
     )
     assert "120 human-labelled bullets of 213, from a:free, b:free" in readme
     assert "pending human labels" not in readme
     notes = (repo / "docs/releases/v1.0.0.md").read_text("utf-8")
-    assert "4% of kept bullets unsupported (21% before the gate), 120 human-labelled" in notes
+    assert "4% of kept bullets unsupported (2 of 50, 95% upper bound 13%; 21% before" in notes
     assert "## [1.0.0] - 2026-10-05" in (repo / "CHANGELOG.md").read_text("utf-8")
     with pytest.raises(ReleaseError, match="already finalised"):
         finalise(URL, repo)
@@ -73,8 +77,19 @@ def test_cli(
 ) -> None:
     monkeypatch.chdir(repo)
     assert main(["--demo-url", URL]) == 1
-    write(repo, 150, out="0%", raw="0%")
+    write(repo, 150, out="0%", raw="0%", kept=53)
     assert main(["--demo-url", URL]) == 0
     captured = capsys.readouterr()
-    assert "fabrication 0% (150 labelled)" in captured.out
+    assert "fabrication 0% of 53 kept (95% upper bound 7%; 150 labelled)" in captured.out
     assert "every label says 'supported'" in captured.err
+
+
+def test_the_upper_bound_matches_the_wilson_interval() -> None:
+    from grounded.release import Measured
+
+    def bound(k: int, n: int) -> float:
+        return Measured(100, 200, "m", "x", "y", n, k).upper_bound
+
+    assert round(bound(0, 53), 3) == 0.068
+    assert round(bound(2, 50), 3) == 0.135
+    assert bound(0, 0) == 1.0

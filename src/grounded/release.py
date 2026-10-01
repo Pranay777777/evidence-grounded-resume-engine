@@ -13,6 +13,7 @@ always comes from a real, sufficiently large run.
 from __future__ import annotations
 
 import argparse
+import math
 import re
 import sys
 from dataclasses import dataclass
@@ -38,6 +39,22 @@ class Measured:
     models: str
     output: str
     raw: str
+    kept: int
+    unsupported_kept: int
+
+    @property
+    def upper_bound(self) -> float:
+        """95% Wilson upper bound on the output fabrication rate.
+
+        "0 of 53" is not proof of zero: with few kept bullets the true rate
+        could still be several percent, and the README says how many."""
+        n, k, z = self.kept, self.unsupported_kept, 1.96
+        if n == 0:
+            return 1.0
+        p = k / n
+        centre = p + z * z / (2 * n)
+        spread = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))
+        return (centre + spread) / (1 + z * z / n)
 
 
 def read_report(path: Path) -> Measured:
@@ -49,10 +66,18 @@ def read_report(path: Path) -> Measured:
     )
     output = re.search(r"\*\*Output fabrication rate\*\*[^|]*\| \*\*([\d.]+%)\*\*", text)
     raw = re.search(r"Raw fabrication rate \(before the gate\) \| ([\d.]+%)", text)
-    if not (head and output and raw):
+    kept = re.search(r"\| Bullets kept \| (\d+) of \d+ \|", text)
+    if not (head and output and raw and kept):
         raise ReleaseError(f"{path} is not a golden-set report from `grounded.evals run`")
+    n = int(kept.group(1))
     return Measured(
-        int(head.group(1)), int(head.group(2)), head.group(3), output.group(1), raw.group(1)
+        int(head.group(1)),
+        int(head.group(2)),
+        head.group(3),
+        output.group(1),
+        raw.group(1),
+        n,
+        round(n * float(output.group(1).rstrip("%")) / 100),
     )
 
 
@@ -71,15 +96,18 @@ def finalise(demo_url: str, root: Path = Path(), today: str | None = None) -> Me
         raise ReleaseError("README placeholders not found - already finalised?")
     row = (
         f"| Fabrication rate (output) | **{measured.output}** of kept bullets unsupported "
-        f"(before the gate: {measured.raw}) | [golden set](docs/results/eval.md): "
+        f"({measured.unsupported_kept} of {measured.kept}; 95% upper bound "
+        f"{measured.upper_bound:.0%}) - before the gate: {measured.raw} "
+        f"| [golden set](docs/results/eval.md): "
         f"{measured.labelled} human-labelled bullets of {measured.items}, from "
         f"{measured.models}; [ADR-010](docs/adr/0010-golden-set-and-evals.md) |\n"
     )
     text = PENDING_ROW.sub(lambda _: row, text).replace("DEMO_URL", f"<{demo_url}>")
     readme.write_text(text, encoding="utf-8", newline="\n")
     line = (
-        f"{measured.output} of kept bullets unsupported ({measured.raw} before the gate), "
-        f"{measured.labelled} human-labelled bullets"
+        f"{measured.output} of kept bullets unsupported ({measured.unsupported_kept} of "
+        f"{measured.kept}, 95% upper bound {measured.upper_bound:.0%}; {measured.raw} before "
+        f"the gate), {measured.labelled} human-labelled bullets"
     )
     notes.write_text(
         notes.read_text(encoding="utf-8").replace("FABRICATION_LINE", line),
@@ -108,7 +136,10 @@ def main(argv: list[str] | None = None) -> int:
     except ReleaseError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
-    print(f"filled: demo link, fabrication {measured.output} ({measured.labelled} labelled), date")
+    print(
+        f"filled: demo link, fabrication {measured.output} of {measured.kept} kept "
+        f"(95% upper bound {measured.upper_bound:.0%}; {measured.labelled} labelled), date"
+    )
     if measured.raw == "0%":
         print(
             "warning: raw fabrication is 0% - every label says 'supported'. Check the labels "
