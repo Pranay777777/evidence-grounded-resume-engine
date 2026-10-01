@@ -11,10 +11,13 @@ shows, and visitors spending the model quota until it stops working.
 
 ## Decision
 
-- **Hugging Face Spaces**, Docker SDK, free CPU tier: enough memory for the
-  ONNX embedding and NLI models, which are baked into the image at build
-  time. The Space's Dockerfile (`deploy/huggingface/`) installs a **tagged
-  release** from GitHub, so the demo runs exactly the tagged code.
+- **Hugging Face Spaces**, free CPU tier. The Docker SDK is paid for this
+  account, so the Space uses the **Gradio SDK only as a free runtime**:
+  `deploy/huggingface/app.py` starts the project's own server on port 7860
+  and no Gradio UI is used. `requirements.txt` installs a **tagged release**
+  from GitHub and `app.py` fetches the demo data at the same tag, so the demo
+  runs exactly the tagged code. The ONNX embedding and NLI models download on
+  first start (not at build time), so a cold start takes a few minutes.
 - **SQLite and the synthetic career**: `python -m grounded.demo` migrates,
   loads `benchmarks/retrieval/corpus.yaml` and indexes it on start. The same
   evidence the benchmarks use, so a reader can check the README's numbers
@@ -33,7 +36,7 @@ shows, and visitors spending the model quota until it stops working.
 
 ## Consequences
 
-- SQLite in `/tmp` is rebuilt on every restart: nothing a visitor does
+- SQLite in `/tmp` is rebuilt on every restart (models are re-downloaded too): nothing a visitor does
   persists, by design.
 - Free models may refuse or rate-limit; the page says so and points to the
   samples.
