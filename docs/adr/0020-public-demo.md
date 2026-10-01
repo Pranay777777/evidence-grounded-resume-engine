@@ -11,8 +11,10 @@ shows, and visitors spending the model quota until it stops working.
 
 ## Decision
 
-- **Hugging Face Spaces**, free CPU tier. The Docker SDK is paid for this
-  account, so the Space uses the **Gradio SDK only as a free runtime**:
+- **Hugging Face Spaces** on the free tier. The Docker SDK and CPU Basic are
+  paid for this account, so the Space uses the **Gradio SDK on ZeroGPU only as
+  a free runtime** (no GPU is used; `app.py` registers one unused
+  `@spaces.GPU` function because ZeroGPU stops Spaces without one):
   `deploy/huggingface/app.py` starts the project's own server on port 7860
   and no Gradio UI is used. `requirements.txt` installs a **tagged release**
   from GitHub and `app.py` fetches the demo data at the same tag, so the demo
