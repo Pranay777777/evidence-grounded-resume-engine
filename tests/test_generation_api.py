@@ -118,6 +118,7 @@ def test_a_draft_is_gated_and_charged(api: TestClient) -> None:
     usage = api.get("/v1/usage", headers={"X-API-Key": KEY}).json()
     assert usage == {
         "key": "tester",
+        "tenant": "default",
         "daily_tokens": 1200,
         "used_today": 500,
         "remaining_today": 700,

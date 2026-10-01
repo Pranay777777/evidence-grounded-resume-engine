@@ -13,14 +13,15 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from slowapi import Limiter
 from sqlalchemy.orm import Session
 
+from grounded.api.auth import AuthError, Principal, identify, require
 from grounded.api.deps import get_session
-from grounded.api.guards import ApiKey, CircuitOpenError, authenticate, parse_keys
+from grounded.api.guards import CircuitOpenError
 from grounded.config import Settings, get_settings
 from grounded.generation import prompt
 from grounded.generation.adapters import make_client
@@ -33,9 +34,13 @@ router = APIRouter(prefix="/v1", tags=["generation"])
 
 
 def _limit_key(request: Request) -> str:
-    presented = request.headers.get("x-api-key")
-    key = authenticate(presented, parse_keys(get_settings().api_keys))
-    return f"key:{key.name}" if key else f"ip:{request.client.host if request.client else '-'}"
+    try:
+        principal = identify(request, get_settings())
+    except AuthError:
+        principal = None
+    if principal is not None:
+        return f"principal:{principal.name}"
+    return f"ip:{request.client.host if request.client else '-'}"
 
 
 limiter = Limiter(key_func=_limit_key)
@@ -45,14 +50,7 @@ def _rate() -> str:
     return get_settings().rate_limit
 
 
-def require_key(request: Request, x_api_key: Annotated[str | None, Header()] = None) -> ApiKey:
-    key = authenticate(x_api_key, parse_keys(get_settings().api_keys))
-    if key is None:
-        raise HTTPException(401, "missing or unknown X-API-Key")
-    return key
-
-
-KeyDep = Annotated[ApiKey, Depends(require_key)]
+KeyDep = Annotated[Principal, Depends(require("generate"))]
 SessionDep = Annotated[Session, Depends(get_session)]
 
 
@@ -107,7 +105,8 @@ def prompts() -> list[dict[str, str]]:
 def usage(request: Request, key: KeyDep) -> dict[str, Any]:
     ledger = request.app.state.ledger
     return {
-        "key": key.name,
+        "key": key.subject,
+        "tenant": key.tenant,
         "daily_tokens": key.daily_tokens,
         "used_today": ledger.used(key),
         "remaining_today": ledger.remaining(key),
@@ -156,6 +155,16 @@ def create(request: Request, body: DraftIn, key: KeyDep, session: SessionDep) ->
     if outcome.cache_similarity is None:
         breaker.success()
     state.ledger.charge(key, outcome.tokens)
+    request.state.log_fields = {
+        "tenant": key.tenant,
+        "subject": key.subject,
+        "model": outcome.generation.model,
+        "prompt_version": outcome.generation.prompt_version,
+        "tokens": outcome.tokens,
+        "kept": len(outcome.report.kept),
+        "dropped": len(outcome.report.dropped),
+        "cache_hit": outcome.cache_similarity is not None,
+    }
     g, report = outcome.generation, outcome.report
     return DraftOut(
         model=g.model,

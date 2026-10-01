@@ -24,3 +24,6 @@ accident.
 | [014](0014-red-team-suite.md) | A red-team suite that assumes the model is fooled |
 | [015](0015-redaction-and-local-mode.md) | Redact before any external call; a fully local mode |
 | [016](0016-generation-api.md) | A generation API with keys, budgets and a circuit breaker |
+| [017](0017-auth-and-tenancy.md) | JWT scopes and row-level tenant isolation, enforced twice |
+| [018](0018-observability.md) | OpenTelemetry traces with the gate's verdict as the eval signal |
+| [019](0019-draft-ui.md) | A draft UI that shows its evidence and its edits |

@@ -17,6 +17,8 @@ dependencies = [
   "pgvector>=0.3",
   "httpx>=0.28",
   "slowapi>=0.1.9",
+  "pyjwt>=2.10",
+  "opentelemetry-api>=1.30",
 ]
 
 [project.optional-dependencies]
@@ -29,11 +31,18 @@ dev = [
   "pip-audit>=2.10.1",
   "types-PyYAML>=6.0",
   "httpx2>=2.13",
+  "opentelemetry-sdk>=1.30",
 ]
 
 # PII redaction with Presidio (ADR-015); also: python -m spacy download en_core_web_sm
 privacy = [
   "presidio-analyzer>=2.2",
+]
+
+# Trace export (ADR-018): the SDK and an OTLP/HTTP exporter.
+observability = [
+  "opentelemetry-sdk>=1.30",
+  "opentelemetry-exporter-otlp-proto-http>=1.30",
 ]
 
 # The dense embedding model (ADR-004): ONNX via fastembed, no PyTorch.
@@ -77,7 +86,7 @@ files = ["src", "tests"]
 
 [[tool.mypy.overrides]]
 module = ["fastembed.*", "onnxruntime.*", "huggingface_hub.*", "tokenizers.*", "numpy.*",
-          "presidio_analyzer.*"]
+          "presidio_analyzer.*", "opentelemetry.exporter.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

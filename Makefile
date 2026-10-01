@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install up down test lint format typecheck security serve migrate evidence index search ablate calibrate draft test-integration collect label eval compare cache-bench redteam keygen clean
+.PHONY: help install up down test lint format typecheck security serve migrate evidence index search ablate calibrate draft test-integration collect label eval compare cache-bench redteam keygen token clean
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -83,6 +83,9 @@ redteam:  ## Worst-case prompt-injection suite (no model calls) -> docs/results/
 
 keygen:  ## Create an API key: make keygen NAME=me
 	python -m grounded.api keygen $(NAME)
+
+token:  ## Issue a JWT: make token TENANT=acme SCOPES=generate,read_evidence
+	python -m grounded.api token --subject $(USER) --tenant $(TENANT) --scopes $(SCOPES)
 
 clean:  ## Remove caches and build artefacts
 	rm -rf .pytest_cache .ruff_cache .mypy_cache htmlcov .coverage coverage.xml dist build

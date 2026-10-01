@@ -230,17 +230,25 @@ def run_live(
 ) -> list[LiveOutcome]:
     session, _ = _corpus(corpus, embedder)
     results = []
+    streak = 0
     try:
         for payload in (p for p in payloads.payloads if p.check == "gate"):
+            if streak >= MAX_CONSECUTIVE_ERRORS:
+                results.append(
+                    LiveOutcome(payload, False, False, 0, "skipped: provider unavailable")
+                )
+                continue
             hits = search(session, payload.text, embedder, k=k)
             given = {h.evidence_id: session.get(Evidence, h.evidence_id) for h in hits}
             records = {i: r for i, r in given.items() if r is not None}
             try:
                 generation = generate(client, payload.text, list(records.values()))
             except (LLMError, GenerationError) as exc:
+                streak = streak + 1 if isinstance(exc, LLMError) else 0
                 results.append(LiveOutcome(payload, False, False, 0, str(exc)[:120]))
                 progress(f"  {payload.id}: error ({str(exc)[:80]})")
                 continue
+            streak = 0
             markers = [m.casefold() for m in payload.markers]
             obeyed = reached = False
             for bullet in generation.draft.bullets:
@@ -263,6 +271,17 @@ def run_live(
     finally:
         session.close()
     return results
+
+
+MAX_CONSECUTIVE_ERRORS = 3
+"""Provider errors in a row that end a live run: a daily quota or an outage will
+not clear mid-run, and every further call would spend quota on nothing."""
+
+
+def usable(results: list[LiveOutcome]) -> bool:
+    """A live report is worth writing only if most payloads actually ran."""
+    ran = sum(1 for r in results if not r.error)
+    return ran * 2 > len(results)
 
 
 def pass_rate(outcomes: list[Outcome], version: str) -> float:

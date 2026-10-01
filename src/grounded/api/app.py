@@ -12,9 +12,12 @@ from slowapi.extension import _rate_limit_exceeded_handler
 from sqlalchemy import Engine, create_engine
 
 from grounded import __version__
-from grounded.api import admin, drafts, routes
+from grounded.api import admin, drafts, routes, ui
+from grounded.api.auth import check_secret
 from grounded.api.guards import CircuitBreaker, Ledger
+from grounded.api.middleware import observe
 from grounded.config import get_settings
+from grounded.observability import configure_tracing
 from grounded.verification.nli import Verifier, get_verifier
 
 
@@ -45,7 +48,15 @@ def create_app(
         return get_verifier(settings.verifier, cache_dir=settings.model_cache_dir)
 
     app.state.get_verifier = verifier or load_verifier
+    configure_tracing(settings)
+    observe(app)
     app.include_router(routes.router)
     app.include_router(drafts.router)
-    app.include_router(admin.router)
+    if settings.auth == "off":
+        # Local tools: server-rendered pages for one person on loopback. With
+        # AUTH=jwt the service is API-only (ADR-017).
+        app.include_router(admin.router)
+        app.include_router(ui.router)
+    else:
+        check_secret(settings)  # refuse to start with a weak or missing secret
     return app

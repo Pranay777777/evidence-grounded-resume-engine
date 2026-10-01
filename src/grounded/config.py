@@ -45,6 +45,16 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434/v1"
     """Only for `ollama:<model>` specs: a local model, no key, nothing leaves the machine."""
 
+    auth: Literal["off", "jwt"] = "off"
+    """`off`: local use - anonymous callers are the default tenant and may read
+    and write evidence (not generate). `jwt`: every call needs a bearer token or
+    API key, and the admin and UI pages are not served (ADR-017)."""
+    jwt_secret: SecretStr = SecretStr("")
+    jwt_issuer: str = "grounded"
+    jwt_audience: str = "grounded-api"
+    default_daily_tokens: int = 50_000
+    """Budget for tokens that do not carry a `budget` claim."""
+
     api_keys: str = ""
     """`name=sha256:daily_tokens,...` - hashes only; make one with
     `python -m grounded.api keygen <name>` (ADR-016)."""
@@ -53,6 +63,12 @@ class Settings(BaseSettings):
     circuit_failures: int = 3
     """Consecutive provider failures that open the circuit breaker."""
     circuit_cooldown_s: float = 60.0
+
+    otel_exporter: Literal["none", "console", "otlp"] = "none"
+    """Where traces go (ADR-018). `otlp` reads OTEL_EXPORTER_OTLP_ENDPOINT."""
+    llm_input_price_per_mtok: float | None = None
+    llm_output_price_per_mtok: float | None = None
+    """USD per million tokens, for cost on traces; free-tier models cost $0."""
 
     llm_max_tokens: int = 2000
     """Output-token cap per call (ADR-014): a draft of at most 8 bullets of at most

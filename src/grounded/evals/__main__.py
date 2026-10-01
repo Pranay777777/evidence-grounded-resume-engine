@@ -151,6 +151,15 @@ def main(argv: list[str] | None = None) -> int:
                 settings.verifier_threshold,
             )
             text = redteam.live_markdown(results, args.model, settings.verifier_threshold)
+            if not redteam.usable(results):
+                print(text)
+                ran = sum(1 for r in results if not r.error)
+                print(
+                    f"error: only {ran} of {len(results)} payloads ran - report not written "
+                    "(an earlier, complete report is kept); retry when the provider recovers",
+                    file=sys.stderr,
+                )
+                return 1
         else:
             outcomes = redteam.run_offline(payloads, CORPUS, verifier, settings.verifier_threshold)
             text = redteam.markdown(

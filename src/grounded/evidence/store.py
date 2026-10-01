@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
+from typing import Any
 
 import yaml
 from sqlalchemy import select
@@ -85,8 +86,22 @@ class Outcome(StrEnum):
     UNCHANGED = "unchanged"
 
 
+def _claim(session: Session, model: type[Any], ident: str) -> None:
+    """IDs are unique across tenants (ADR-017). A tenant-scoped lookup that
+    finds nothing may still collide with another tenant's row; say so, rather
+    than failing later on the primary key."""
+    taken = session.execute(
+        select(model.id).where(model.id == ident).execution_options(all_tenants=True)
+    ).first()
+    if taken is not None:
+        raise EvidenceError(f"id '{ident}' is already in use - choose another")
+
+
 def upsert_role(session: Session, r: RoleIn) -> Role:
-    role = session.get(Role, r.id) or Role(id=r.id)
+    role = session.get(Role, r.id)
+    if role is None:
+        _claim(session, Role, r.id)
+        role = Role(id=r.id)
     role.title, role.organisation = r.title, r.organisation
     role.start_month, role.end_month = r.start, r.end
     session.add(role)
@@ -96,7 +111,10 @@ def upsert_role(session: Session, r: RoleIn) -> Role:
 def upsert_project(session: Session, p: ProjectIn) -> Project:
     if p.role and session.get(Role, p.role) is None:
         raise EvidenceError(f"project '{p.id}' refers to unknown role '{p.role}'")
-    project = session.get(Project, p.id) or Project(id=p.id)
+    project = session.get(Project, p.id)
+    if project is None:
+        _claim(session, Project, p.id)
+        project = Project(id=p.id)
     project.name, project.role_id, project.summary = p.name, p.role, p.summary
     project.repo_url = str(p.repo_url) if p.repo_url else None
     session.add(project)
@@ -119,6 +137,7 @@ def upsert_evidence(
 
     record = session.get(Evidence, item.id)
     if record is None:
+        _claim(session, Evidence, item.id)
         record = Evidence(id=item.id, revision=1)
         _write_fact(record, item)
         record.verification_status = VerificationStatus.UNVERIFIED

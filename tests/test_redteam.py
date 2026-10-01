@@ -195,3 +195,50 @@ def test_cli(
     monkeypatch.setattr(cli, "make_client", refused)
     assert cli.main(["redteam", "--live", "--model", "x/y"]) == 1
     get_settings.cache_clear()
+
+
+def test_live_mode_stops_after_consecutive_errors_and_keeps_a_good_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from grounded.evals.redteam import MAX_CONSECUTIVE_ERRORS, usable
+
+    class Down(Obedient):
+        calls = 0
+
+        def complete(
+            self,
+            messages: list[dict[str, Any]],
+            tools: list[dict[str, Any]] | None = None,
+            tool_choice: dict[str, Any] | None = None,
+            temperature: float = 0.0,
+        ) -> ChatResponse:
+            Down.calls += 1
+            from grounded.generation.llm import LLMError
+
+            raise LLMError("provider returned 429: free-models-per-day")
+
+    results = run_live(
+        read_payloads(PAYLOADS),
+        CORPUS,
+        Down(),
+        get_embedder("hashing"),
+        Always(Label.NEUTRAL, 0.0),
+        0.95,
+        progress=lambda _: None,
+    )
+    assert Down.calls == MAX_CONSECUTIVE_ERRORS
+    assert sum(r.error.startswith("skipped") for r in results) == len(results) - 3
+    assert not usable(results)
+
+    monkeypatch.setenv("EMBEDDER", "hashing")
+    get_settings.cache_clear()
+    monkeypatch.setattr(
+        cli, "get_verifier", lambda name, cache_dir=None: Always(Label.NEUTRAL, 0.0)
+    )
+    monkeypatch.setattr(cli, "make_client", lambda spec, settings: Down())
+    report = tmp_path / "live.md"
+    report.write_text("earlier complete report", encoding="utf-8")
+    assert cli.main(["redteam", "--live", "--model", "m:free", "--out", str(report)]) == 1
+    assert report.read_text(encoding="utf-8") == "earlier complete report"
+    assert "report not written" in capsys.readouterr().err
+    get_settings.cache_clear()

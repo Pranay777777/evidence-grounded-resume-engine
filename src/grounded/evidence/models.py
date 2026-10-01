@@ -36,6 +36,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.types import TypeDecorator, TypeEngine
 
 from grounded.evidence.enums import EvidenceKind, VerificationMethod, VerificationStatus
+from grounded.evidence.tenancy import TenantScoped
 
 ID_PATTERN = r"^[a-z0-9]+(-[a-z0-9]+)*$"
 """Stable IDs are lowercase slugs: readable in a citation, safe in a URL."""
@@ -98,7 +99,7 @@ class Timestamps:
     )
 
 
-class Role(Timestamps, Base):
+class Role(TenantScoped, Timestamps, Base):
     __tablename__ = "role"
     __table_args__ = (
         CheckConstraint(
@@ -117,7 +118,7 @@ class Role(Timestamps, Base):
     projects: Mapped[list[Project]] = relationship(back_populates="role")
 
 
-class Project(Timestamps, Base):
+class Project(TenantScoped, Timestamps, Base):
     __tablename__ = "project"
 
     id: Mapped[str] = mapped_column(String(80), primary_key=True)
@@ -129,7 +130,7 @@ class Project(Timestamps, Base):
     role: Mapped[Role | None] = relationship(back_populates="projects")
 
 
-class Evidence(Timestamps, Base):
+class Evidence(TenantScoped, Timestamps, Base):
     __tablename__ = "evidence"
     __table_args__ = (
         _in("kind", EvidenceKind),
@@ -197,7 +198,7 @@ class Evidence(Timestamps, Base):
         return self.verification_status == VerificationStatus.VERIFIED
 
 
-class EvidenceEmbedding(Base):
+class EvidenceEmbedding(TenantScoped, Base):
     """One record's vector under one embedder, stamped with the revision it encodes.
 
     Keyed by (record, embedder) so models can be compared side by side

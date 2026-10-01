@@ -23,6 +23,15 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
+from typing import Protocol
+
+
+class Budgeted(Protocol):
+    @property
+    def name(self) -> str: ...
+
+    @property
+    def daily_tokens(self) -> int: ...
 
 
 @dataclass(frozen=True)
@@ -30,6 +39,7 @@ class ApiKey:
     name: str
     digest: str
     daily_tokens: int
+    tenant: str = "default"
 
 
 def digest(key: str) -> str:
@@ -37,15 +47,20 @@ def digest(key: str) -> str:
 
 
 def parse_keys(config: str) -> list[ApiKey]:
-    """`name=sha256hex:budget,...` - whitespace ignored."""
+    """`name=sha256hex:budget[:tenant],...` - whitespace ignored."""
     keys = []
     for entry in filter(None, (e.strip() for e in config.split(","))):
         try:
             name, rest = entry.split("=", 1)
-            hexdigest, budget = rest.split(":", 1)
-            key = ApiKey(name.strip(), hexdigest.strip().lower(), int(budget))
+            parts = rest.split(":")
+            if len(parts) not in (2, 3):
+                raise ValueError(entry)
+            tenant = parts[2].strip() if len(parts) == 3 else "default"
+            key = ApiKey(name.strip(), parts[0].strip().lower(), int(parts[1]), tenant)
         except ValueError as exc:
-            raise ValueError(f"API_KEYS entry '{entry}' is not name=sha256:budget") from exc
+            raise ValueError(
+                f"API_KEYS entry '{entry}' is not name=sha256:budget[:tenant]"
+            ) from exc
         if len(key.digest) != 64 or not all(c in "0123456789abcdef" for c in key.digest):
             raise ValueError(f"API_KEYS entry '{key.name}' needs a 64-character sha256 hex digest")
         keys.append(key)
@@ -75,13 +90,13 @@ class Ledger:
     spent: dict[tuple[str, date], int] = field(default_factory=dict)
     _lock: threading.Lock = field(default_factory=threading.Lock)
 
-    def used(self, key: ApiKey) -> int:
+    def used(self, key: Budgeted) -> int:
         return self.spent.get((key.name, self.today()), 0)
 
-    def remaining(self, key: ApiKey) -> int:
+    def remaining(self, key: Budgeted) -> int:
         return max(key.daily_tokens - self.used(key), 0)
 
-    def charge(self, key: ApiKey, tokens: int) -> None:
+    def charge(self, key: Budgeted, tokens: int) -> None:
         with self._lock:
             slot = (key.name, self.today())
             self.spent[slot] = self.spent.get(slot, 0) + tokens

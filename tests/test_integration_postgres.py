@@ -157,3 +157,64 @@ def test_the_hnsw_index_exists_and_is_used(pg: Engine) -> None:
         )
     assert method == "hnsw"
     assert "ix_evidence_embedding_hnsw" in plan
+
+
+def test_row_level_security_isolates_tenants_below_the_orm(pg: Engine) -> None:
+    """Defence in depth (ADR-017): raw SQL, no ORM filter, a non-superuser role -
+    Postgres itself still returns only the transaction's tenant."""
+    from grounded.evidence.schema import EvidenceIn
+    from grounded.evidence.store import upsert_evidence
+    from grounded.evidence.tenancy import scope
+
+    ensure_schema(pg)
+    for tenant in ("acme", "globex"):
+        with scope(Session(pg), tenant) as session:
+            item = {
+                "id": f"{tenant}-fact",
+                "kind": "achievement",
+                "statement": f"Built the {tenant} pipeline for the RLS test.",
+            }
+            upsert_evidence(session, EvidenceIn.model_validate(item))
+            session.commit()
+
+    role = f"rls_probe_{uuid.uuid4().hex[:8]}"
+    with pg.connect() as conn:
+        conn.execute(text(f'CREATE ROLE "{role}" NOLOGIN'))
+        conn.execute(text(f'GRANT SELECT, INSERT ON evidence TO "{role}"'))
+        conn.commit()
+    try:
+        with pg.connect() as conn:
+            conn.execute(text(f'SET ROLE "{role}"'))
+            conn.execute(text("SELECT set_config('app.tenant_id', 'acme', false)"))
+            assert conn.execute(text("SELECT id FROM evidence")).scalars().all() == ["acme-fact"]
+            conn.execute(text("SELECT set_config('app.tenant_id', 'globex', false)"))
+            assert conn.execute(text("SELECT id FROM evidence")).scalars().all() == ["globex-fact"]
+            conn.execute(text("SELECT set_config('app.tenant_id', '', false)"))
+            assert conn.execute(text("SELECT id FROM evidence")).scalars().all() == []
+            # Writing a row for another tenant is refused by the policy's WITH CHECK.
+            conn.execute(text("SELECT set_config('app.tenant_id', 'acme', false)"))
+            with pytest.raises(Exception, match="row-level security"):
+                conn.execute(
+                    text(
+                        "INSERT INTO evidence (id, kind, statement, content_hash, tenant_id, "
+                        "verification_status, revision, skills, created_at, updated_at) VALUES "
+                        "('sneaky', 'achievement', 'Planted into another tenant.', 'h', 'globex', "
+                        "'unverified', 1, '[]', now(), now())"
+                    )
+                )
+            conn.rollback()
+            conn.execute(text("RESET ROLE"))
+    finally:
+        with pg.connect() as conn:
+            conn.execute(text(f'REVOKE ALL ON evidence FROM "{role}"'))
+            conn.execute(text(f'DROP ROLE "{role}"'))
+            conn.commit()
+
+
+def test_scoped_sessions_set_the_tenant_for_postgres(pg: Engine) -> None:
+    from grounded.evidence.tenancy import scope
+
+    ensure_schema(pg)
+    with scope(Session(pg), "acme") as session:
+        value = session.execute(text("SELECT current_setting('app.tenant_id', true)")).scalar()
+        assert value == "acme"

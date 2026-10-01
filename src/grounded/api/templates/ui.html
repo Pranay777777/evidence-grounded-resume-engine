@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Draft{% endblock %}
+{% block content %}
+<style>
+  .bullet { font-size:16px; margin:0 0 6px; }
+  .cite { position:relative; display:inline-block; margin-left:2px; font-size:11px; vertical-align:super;
+          color:#1d4ed8; cursor:help; text-decoration:underline dotted; }
+  .cite .pop { display:none; position:absolute; z-index:10; left:0; top:1.6em; width:340px; padding:10px 12px;
+               background:#fff; border:1px solid var(--line); border-radius:6px; box-shadow:0 6px 18px rgba(0,0,0,.12);
+               font-size:13px; line-height:1.45; color:var(--ink); vertical-align:baseline; text-decoration:none; }
+  .cite:hover .pop, .cite:focus .pop, .cite:focus-within .pop { display:block; }
+  .diff { margin:8px 0 0; font-size:13px; }
+  .diff .base { color:var(--muted); }
+  ins { background:#e3f4ea; color:var(--ok); text-decoration:none; padding:0 1px; }
+  del { background:#fde8e6; color:var(--bad); padding:0 1px; }
+  details summary { cursor:pointer; color:var(--muted); font-size:13px; }
+  .meta { color:var(--muted); font-size:12px; }
+</style>
+
+<div class="card">
+  <form method="post" action="/ui/draft">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="jd">Job description</label>
+    <textarea id="jd" name="job_description" rows="7" required>{{ job_description }}</textarea>
+    <label><input type="checkbox" name="rerank" value="true" style="width:auto"> Rerank evidence (slower, more precise)</label>
+    <button type="submit">Draft bullets</button>
+  </form>
+</div>
+
+{% if error %}<p class="errors" role="alert">{{ error }}</p>{% endif %}
+
+{% if result %}
+<div class="card">
+  <p class="meta">
+    {{ result.generation.model }} · prompt {{ result.generation.prompt_version }} ({{ result.generation.prompt_fingerprint }})
+    · {% if result.verified %}verified at entailment ≥ {{ result.threshold }}{% else %}<strong>UNVERIFIED</strong>{% endif %}
+    {% if result.cache_similarity is not none %} · cache hit (similarity {{ "%.3f"|format(result.cache_similarity) }}){% endif %}
+    {% if result.generation.redacted %} · {{ result.generation.redacted }} span(s) redacted before sending{% endif %}
+  </p>
+  <h2>Kept ({{ result.kept|length }})</h2>
+  {% for b in result.kept %}
+  <div class="bullet-block" style="margin-bottom:16px">
+    <p class="bullet">{{ b.text }}{% for c in b.citations %}<span class="cite" tabindex="0" aria-label="Evidence {{ c.number }}">[{{ c.number }}]<span class="pop" role="tooltip"><strong>{{ c.record.id }}</strong> · rev {{ c.record.revision }} · {{ c.record.verification_method or "unverified" }}<br>{{ c.record.statement }}{% if c.record.project %}<br><span class="meta">{{ c.record.project.name }}</span>{% endif %}</span></span>{% endfor %}</p>
+    <p class="meta">entailment {{ "%.2f"|format(b.entailment) if b.entailment is not none else "-" }} · {{ "%.0f"|format(b.added_share * 100) }}% of words not in the evidence</p>
+    <details>
+      <summary>Base vs tailored</summary>
+      <p class="diff base">Base (evidence): {{ b.base }}</p>
+      <p class="diff">Tailored: {% for op, text in b.diff %}{% if not loop.first %} {% endif %}{% if op == "added" %}<ins>{{ text }}</ins>{% elif op == "removed" %}<del>{{ text }}</del>{% else %}{{ text }}{% endif %}{% endfor %}</p>
+    </details>
+  </div>
+  {% else %}
+  <p class="muted">Nothing passed the gate.</p>
+  {% endfor %}
+
+  {% if result.dropped %}
+  <h2>Dropped ({{ result.dropped|length }})</h2>
+  <ul>{% for d in result.dropped %}<li>{{ d.bullet.text }} <span class="meta">- {{ d.reason }}</span></li>{% endfor %}</ul>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

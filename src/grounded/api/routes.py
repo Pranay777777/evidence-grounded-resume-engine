@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from grounded.api.auth import require
 from grounded.api.deps import get_session
 from grounded.api.models import (
     EvidenceOut,
@@ -57,7 +58,9 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@router.get("/evidence", response_model=list[EvidenceOut])
+@router.get(
+    "/evidence", dependencies=[Depends(require("read_evidence"))], response_model=list[EvidenceOut]
+)
 def list_evidence(
     session: SessionDep,
     status: VerificationStatus | None = None,
@@ -74,7 +77,11 @@ def list_evidence(
     return list(session.scalars(query))
 
 
-@router.get("/evidence/{evidence_id}", response_model=EvidenceOut)
+@router.get(
+    "/evidence/{evidence_id}",
+    dependencies=[Depends(require("read_evidence"))],
+    response_model=EvidenceOut,
+)
 def get_evidence(evidence_id: str, session: SessionDep) -> Evidence:
     record = session.get(Evidence, evidence_id)
     if record is None:
@@ -82,7 +89,9 @@ def get_evidence(evidence_id: str, session: SessionDep) -> Evidence:
     return record
 
 
-@router.put("/evidence/{evidence_id}", response_model=WriteResult)
+@router.put(
+    "/evidence/{evidence_id}", dependencies=[Depends(require("admin"))], response_model=WriteResult
+)
 def put_evidence(evidence_id: str, body: EvidenceIn, session: SessionDep) -> WriteResult:
     """Create or replace a record. A changed fact comes back unverified."""
     _same_id(evidence_id, body.id)
@@ -99,7 +108,11 @@ def put_evidence(evidence_id: str, body: EvidenceIn, session: SessionDep) -> Wri
     )
 
 
-@router.post("/evidence/{evidence_id}/verify", response_model=EvidenceOut)
+@router.post(
+    "/evidence/{evidence_id}/verify",
+    dependencies=[Depends(require("admin"))],
+    response_model=EvidenceOut,
+)
 def verify_evidence(evidence_id: str, body: VerifyIn, session: SessionDep) -> Evidence:
     _found(session, Evidence, evidence_id)
     try:
@@ -108,18 +121,24 @@ def verify_evidence(evidence_id: str, body: VerifyIn, session: SessionDep) -> Ev
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.post("/evidence/{evidence_id}/reject", response_model=EvidenceOut)
+@router.post(
+    "/evidence/{evidence_id}/reject",
+    dependencies=[Depends(require("admin"))],
+    response_model=EvidenceOut,
+)
 def reject_evidence(evidence_id: str, body: RejectIn, session: SessionDep) -> Evidence:
     _found(session, Evidence, evidence_id)
     return reject(session, evidence_id, body.by)
 
 
-@router.get("/roles", response_model=list[RoleOut])
+@router.get(
+    "/roles", dependencies=[Depends(require("read_evidence"))], response_model=list[RoleOut]
+)
 def list_roles(session: SessionDep) -> list[Role]:
     return list(session.scalars(select(Role).order_by(Role.id)))
 
 
-@router.put("/roles/{role_id}", response_model=RoleOut)
+@router.put("/roles/{role_id}", dependencies=[Depends(require("admin"))], response_model=RoleOut)
 def put_role(role_id: str, body: RoleIn, session: SessionDep) -> Role:
     _same_id(role_id, body.id)
     role = upsert_role(session, body)
@@ -127,12 +146,16 @@ def put_role(role_id: str, body: RoleIn, session: SessionDep) -> Role:
     return role
 
 
-@router.get("/projects", response_model=list[ProjectOut])
+@router.get(
+    "/projects", dependencies=[Depends(require("read_evidence"))], response_model=list[ProjectOut]
+)
 def list_projects(session: SessionDep) -> list[Project]:
     return list(session.scalars(select(Project).order_by(Project.id)))
 
 
-@router.put("/projects/{project_id}", response_model=ProjectOut)
+@router.put(
+    "/projects/{project_id}", dependencies=[Depends(require("admin"))], response_model=ProjectOut
+)
 def put_project(project_id: str, body: ProjectIn, session: SessionDep) -> Project:
     _same_id(project_id, body.id)
     try:

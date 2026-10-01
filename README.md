@@ -86,8 +86,10 @@ Filled in as each component ships — measured numbers only.
 - [x] Prompt registry ([ADR-012](docs/adr/0012-prompt-registry-and-model-adapters.md)), model adapters with a model comparison, and a semantic cache that still gates every draft ([ADR-013](docs/adr/0013-semantic-cache.md))
 - [x] Prompt-injection red team mapped to OWASP LLM Top 10 2026 ([ADR-014](docs/adr/0014-red-team-suite.md)), redaction before external calls and a local-only mode ([ADR-015](docs/adr/0015-redaction-and-local-mode.md))
 - [x] Generation API: API keys, per-key budgets, rate limits, circuit breaker ([ADR-016](docs/adr/0016-generation-api.md))
-- [ ] Auth and multi-tenancy
-- [ ] Tracing, a citation-aware UI, and a deployed demo
+- [x] JWT scopes and tenant isolation enforced in the ORM and by Postgres row-level security ([ADR-017](docs/adr/0017-auth-and-tenancy.md))
+- [x] OpenTelemetry traces per draft: tokens, cost, per-stage latency, the gate's verdict ([ADR-018](docs/adr/0018-observability.md))
+- [x] Draft UI with inline citations, evidence on hover and a base-vs-tailored diff ([ADR-019](docs/adr/0019-draft-ui.md))
+- [ ] Deployed demo and v1.0.0
 
 ## Development
 
