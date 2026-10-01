@@ -15,7 +15,7 @@ import os
 import urllib.request
 from pathlib import Path
 
-REF = "v1.0.1"
+REF = "v1.0.2"
 REPO = "https://raw.githubusercontent.com/Pranay777777/evidence-grounded-resume-engine"
 DATA = (
     "benchmarks/retrieval/corpus.yaml",

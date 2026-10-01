@@ -3,7 +3,7 @@
 > Résumé generation where every claim cites a verified evidence record — and a claim its evidence does not support is rejected, never smoothed over. The fabrication rate is measured, not promised.
 
 [![CI](https://github.com/Pranay777777/evidence-grounded-resume-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Pranay777777/evidence-grounded-resume-engine/actions/workflows/ci.yml)
-![Release](https://img.shields.io/badge/release-v1.0.1-blue)
+![Release](https://img.shields.io/badge/release-v1.0.2-blue)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 

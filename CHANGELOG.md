@@ -6,6 +6,14 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-10-01
+
+### Fixed
+- The public demo's forms inside the Hugging Face page: the CSRF cookie was
+  `SameSite=Strict`, which a cross-site iframe never sends. In demo mode it is
+  now `SameSite=None; Secure; Partitioned`, and a browser that blocks it falls
+  back to the Origin check (ADR-020).
+
 ## [1.0.1] - 2026-10-01
 
 ### Fixed
@@ -32,6 +40,7 @@ First release - see [docs/releases/v1.0.0.md](docs/releases/v1.0.0.md).
 - Draft UI with inline citations, evidence on hover and a base-vs-tailored diff (ADR-019).
 - Public read-only demo on Hugging Face Spaces (ADR-020).
 
-[Unreleased]: https://github.com/Pranay777777/evidence-grounded-resume-engine/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/Pranay777777/evidence-grounded-resume-engine/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/Pranay777777/evidence-grounded-resume-engine/releases/tag/v1.0.2
 [1.0.1]: https://github.com/Pranay777777/evidence-grounded-resume-engine/releases/tag/v1.0.1
 [1.0.0]: https://github.com/Pranay777777/evidence-grounded-resume-engine/releases/tag/v1.0.0

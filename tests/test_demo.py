@@ -67,7 +67,7 @@ def site(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient
     app = create_app(
         create_engine(url), client_factory=lambda spec, s: Counting(), verifier=lambda: Entailed()
     )
-    with TestClient(app) as client:
+    with TestClient(app, base_url="https://testserver") as client:
         yield client
     get_settings.cache_clear()
 
@@ -169,3 +169,29 @@ def test_main(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("uvicorn.run", lambda app, **kw: served.append(kw))
     assert demo.main([]) == 0 and served[0]["port"] == Settings().port
     get_settings.cache_clear()
+
+
+def test_the_csrf_cookie_survives_the_cross_site_iframe(site: TestClient) -> None:
+    site.cookies.clear()
+    cookie = site.get("/ui").headers["set-cookie"].lower()
+    assert "samesite=none" in cookie and "secure" in cookie and "partitioned" in cookie
+
+
+def test_blocked_iframe_cookies_fall_back_to_the_origin_check(site: TestClient) -> None:
+    first = samples()[0].job.id
+    token = csrf(site)
+    site.cookies.clear()  # a browser that blocks cookies in the iframe
+    same = site.post(
+        "/ui/sample",
+        data={"jd_id": first, "csrf_token": token},
+        headers={"Origin": "https://testserver"},
+    )
+    assert same.status_code == 200, same.text
+    no_origin = site.post("/ui/sample", data={"jd_id": first, "csrf_token": token})
+    assert no_origin.status_code == 403
+    other = site.post(
+        "/ui/sample",
+        data={"jd_id": first, "csrf_token": token},
+        headers={"Origin": "https://evil.example"},
+    )
+    assert other.status_code == 403

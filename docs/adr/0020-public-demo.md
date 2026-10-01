@@ -43,5 +43,8 @@ shows, and visitors spending the model quota until it stops working.
 - The Gradio runtime installs its own pinned dependencies beside ours
   (Gradio 6.29's `mcp` extra caps pydantic at 2.12.5), so the package's
   dependency floors must stay compatible with the Space's Gradio version.
+- The Space page embeds the app in a cross-site iframe, so the CSRF cookie
+  is `SameSite=None; Secure; Partitioned` in demo mode, with the Origin check
+  as the fallback where a browser blocks it (`grounded.api.csrf`).
 - Free models may refuse or rate-limit; the page says so and points to the
   samples.

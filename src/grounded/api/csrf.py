@@ -10,6 +10,13 @@ will send it. Two checks, either of which stops that:
    cannot read it, so it cannot put the matching value in the form.
 2. **Origin check.** Browsers attach `Origin` to cross-site POSTs; a POST
    whose Origin is not this server is refused.
+
+The public demo (ADR-020) is shown inside a cross-site iframe (huggingface.co
+embeds the Space's own domain), where a `SameSite=Strict` cookie is never
+sent. There the cookie is `SameSite=None; Secure; Partitioned`, so it is kept
+only for that embedding, and a browser that blocks even partitioned cookies
+falls back to the Origin check alone - enough for a read-only demo with no
+session to ride.
 """
 
 from __future__ import annotations
@@ -31,14 +38,23 @@ def issue(request: Request) -> tuple[str, bool]:
     return secrets.token_urlsafe(32), True
 
 
-def attach(response: Response, token: str) -> None:
-    response.set_cookie(COOKIE, token, httponly=True, samesite="strict")
+def attach(response: Response, token: str, *, embedded: bool = False) -> None:
+    if embedded:
+        # Written by hand: Starlette's `partitioned=` needs Python 3.14's http.cookies.
+        # token_urlsafe() output needs no quoting.
+        response.headers.append(
+            "set-cookie", f"{COOKIE}={token}; HttpOnly; Path=/; SameSite=None; Secure; Partitioned"
+        )
+    else:
+        response.set_cookie(COOKIE, token, httponly=True, samesite="strict")
 
 
-def check(request: Request, submitted: str | None) -> None:
+def check(request: Request, submitted: str | None, *, embedded: bool = False) -> None:
     origin = request.headers.get("origin")
     if origin and urlsplit(origin).netloc != request.url.netloc:
         raise HTTPException(status_code=403, detail="cross-origin form submission refused")
     cookie = request.cookies.get(COOKIE)
+    if embedded and origin and not cookie:
+        return  # same-origin proven above; this browser blocks cookies in the iframe
     if not cookie or not submitted or not secrets.compare_digest(cookie, submitted):
         raise HTTPException(status_code=403, detail="missing or invalid CSRF token")

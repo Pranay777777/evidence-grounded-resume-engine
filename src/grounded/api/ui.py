@@ -140,7 +140,7 @@ def _render(request: Request, context: dict[str, Any], status: int = 200) -> Res
     }
     response = templates.TemplateResponse(request, "ui.html", context, status_code=status)
     if new:
-        csrf.attach(response, token)
+        csrf.attach(response, token, embedded=settings.demo)
     return response
 
 
@@ -158,7 +158,7 @@ def draft(
     rerank: Annotated[bool, Form()] = False,
     csrf_token: Annotated[str | None, Form()] = None,
 ) -> Response:
-    csrf.check(request, csrf_token)
+    csrf.check(request, csrf_token, embedded=get_settings().demo)
     context: dict[str, Any] = {"job_description": job_description, "result": None, "error": None}
     if len(job_description.strip()) < 20:
         context["error"] = "Paste a job description (at least 20 characters)."
@@ -201,7 +201,7 @@ def sample(
     csrf_token: Annotated[str | None, Form()] = None,
 ) -> Response:
     """A recorded generation, judged by the live gate. No model call."""
-    csrf.check(request, csrf_token)
+    csrf.check(request, csrf_token, embedded=get_settings().demo)
     chosen = next((s for s in samples() if s.job.id == jd_id), None)
     if chosen is None:
         return _render(
