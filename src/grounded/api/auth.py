@@ -50,6 +50,8 @@ class Principal:
 
 
 LOCAL = Principal("local", DEFAULT_TENANT, frozenset({"read_evidence", "admin"}), 0, True)
+DEMO = Principal("demo-visitor", DEFAULT_TENANT, frozenset({"read_evidence"}), 0, True)
+"""A public demo visitor can read the evidence and draft from the UI - nothing else."""
 
 
 class AuthError(ValueError):
@@ -143,7 +145,7 @@ def current_principal(
     if principal is not None:
         return principal
     if settings.auth == "off":
-        return LOCAL
+        return DEMO if settings.demo else LOCAL
     raise HTTPException(401, "credentials required", headers={"WWW-Authenticate": "Bearer"})
 
 
@@ -155,6 +157,8 @@ def require(scope: str) -> Callable[[Principal], Principal]:
 
     def dependency(principal: PrincipalDep) -> Principal:
         if scope not in principal.scopes:
+            if principal is DEMO:
+                raise HTTPException(403, "the public demo is read-only")
             if principal.anonymous:
                 raise HTTPException(
                     401, f"'{scope}' needs a credential", headers={"WWW-Authenticate": "Bearer"}

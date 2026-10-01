@@ -54,8 +54,10 @@ def create_app(
     app.include_router(drafts.router)
     if settings.auth == "off":
         # Local tools: server-rendered pages for one person on loopback. With
-        # AUTH=jwt the service is API-only (ADR-017).
-        app.include_router(admin.router)
+        # AUTH=jwt the service is API-only (ADR-017). The public demo keeps
+        # the UI but never the admin (ADR-020).
+        if not settings.demo:
+            app.include_router(admin.router)
         app.include_router(ui.router)
     else:
         check_secret(settings)  # refuse to start with a weak or missing secret

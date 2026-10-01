@@ -648,3 +648,19 @@ def test_cli_collect_skips_per_prompt_version(
         == 1
     )
     assert "unknown prompt version" in capsys.readouterr().err
+
+
+def test_labelling_shows_new_words_and_honours_a_limit(tmp_path: Path) -> None:
+    from grounded.evals.label import new_words
+
+    assert new_words(
+        "Wrote Airflow DAGs for nightly loads.", "Built Airflow DAGs with Kubernetes."
+    ) == ["Built", "Kubernetes"]
+    path = tmp_path / "golden.jsonl"
+    write_items(path, [item("a"), item("b", text="Built Airflow DAGs on Kubernetes.")])
+    shown: list[str] = []
+    jobs = JobSet(jds=[Job(id="j1", title="T", text="x")])
+    assert label(path, jobs, "Pranay", answers("y"), shown.append, limit=1) == (1, 1)
+    assert "NEW:      (nothing - every word is in the evidence)" in shown
+    assert label(path, jobs, "Pranay", answers("n", ""), shown.append) == (1, 0)
+    assert "NEW:      Kubernetes" in shown  # "on" is filler

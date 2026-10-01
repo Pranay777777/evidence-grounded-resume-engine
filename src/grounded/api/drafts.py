@@ -40,7 +40,17 @@ def _limit_key(request: Request) -> str:
         principal = None
     if principal is not None:
         return f"principal:{principal.name}"
-    return f"ip:{request.client.host if request.client else '-'}"
+    return f"ip:{client_ip(request)}"
+
+
+def client_ip(request: Request) -> str:
+    """Behind the demo host's proxy every request comes from the proxy, so the
+    visitor is the first X-Forwarded-For hop - trusted only in demo mode, where
+    the proxy is the platform's. Elsewhere, the socket address."""
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if get_settings().demo and forwarded:
+        return forwarded.split(",")[0].strip()[:64]
+    return request.client.host if request.client else "-"
 
 
 limiter = Limiter(key_func=_limit_key)

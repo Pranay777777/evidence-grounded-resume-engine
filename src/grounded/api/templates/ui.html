@@ -17,6 +17,29 @@
   .meta { color:var(--muted); font-size:12px; }
 </style>
 
+{% if demo %}
+<div class="card" style="border-color:#c7d2fe;background:#eef2ff">
+  <strong>Public demo.</strong> The career is synthetic and the evidence is read-only.
+  Every bullet must cite a verified record and pass the grounding gate - dropped bullets
+  are shown with the reason. Samples replay drafts real models wrote, judged live with no
+  model call; your own job description uses a free model ({{ demo_rate }} per visitor).
+  <a href="https://github.com/Pranay777777/evidence-grounded-resume-engine">Source and results</a>.
+</div>
+{% endif %}
+
+{% if samples %}
+<div class="card">
+  <h2 style="margin-top:0">Samples</h2>
+  <p class="muted">A recorded draft for a synthetic job description, run through the gate now.</p>
+  <form method="post" action="/ui/sample" style="display:flex;flex-wrap:wrap;gap:8px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% for s in samples[:8] %}
+    <button type="submit" name="jd_id" value="{{ s.job.id }}" class="secondary" style="color:var(--ink);border-color:var(--line);margin-top:0">{{ s.job.title }}</button>
+    {% endfor %}
+  </form>
+</div>
+{% endif %}
+
 <div class="card">
   <form method="post" action="/ui/draft">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -31,6 +54,7 @@
 
 {% if result %}
 <div class="card">
+  {% if result.sample %}<p class="meta"><strong>Sample:</strong> recorded draft for "{{ result.sample.job.title }}", judged by the live gate.</p>{% endif %}
   <p class="meta">
     {{ result.generation.model }} · prompt {{ result.generation.prompt_version }} ({{ result.generation.prompt_fingerprint }})
     · {% if result.verified %}verified at entailment ≥ {{ result.threshold }}{% else %}<strong>UNVERIFIED</strong>{% endif %}

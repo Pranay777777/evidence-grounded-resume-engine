@@ -45,6 +45,14 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434/v1"
     """Only for `ollama:<model>` specs: a local model, no key, nothing leaves the machine."""
 
+    demo: bool = False
+    """Public read-only demo (ADR-020): no evidence writes, no admin, per-visitor
+    rate limit and a daily model budget for drafts from the UI."""
+    demo_rate: str = "5/hour"
+    demo_daily_tokens: int = 150_000
+    golden_path: str = "benchmarks/golden/golden.jsonl"
+    jobs_path: str = "benchmarks/golden/jds.yaml"
+
     auth: Literal["off", "jwt"] = "off"
     """`off`: local use - anonymous callers are the default tenant and may read
     and write evidence (not generate). `jwt`: every call needs a bearer token or

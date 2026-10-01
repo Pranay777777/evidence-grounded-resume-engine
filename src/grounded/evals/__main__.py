@@ -62,6 +62,8 @@ def main(argv: list[str] | None = None) -> int:
     col.add_argument("--out", type=Path, default=GOLDEN)
     lab = sub.add_parser("label")
     lab.add_argument("--by", required=True)
+
+    lab.add_argument("--limit", type=int, help="stop after labelling this many")
     lab.add_argument("--file", type=Path, default=GOLDEN)
     run = sub.add_parser("run")
     run.add_argument("--file", type=Path, default=GOLDEN)
@@ -186,7 +188,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "label":
-        done, left = label(args.file, jobs, args.by, ask=input)
+        done, left = label(args.file, jobs, args.by, ask=input, limit=args.limit)
         print(f"\nlabelled {done} this session; {left} still unlabelled")
         return 0
 

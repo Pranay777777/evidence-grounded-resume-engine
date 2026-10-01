@@ -27,3 +27,4 @@ accident.
 | [017](0017-auth-and-tenancy.md) | JWT scopes and row-level tenant isolation, enforced twice |
 | [018](0018-observability.md) | OpenTelemetry traces with the gate's verdict as the eval signal |
 | [019](0019-draft-ui.md) | A draft UI that shows its evidence and its edits |
+| [020](0020-public-demo.md) | A public demo that cannot be vandalised or bankrupted |
