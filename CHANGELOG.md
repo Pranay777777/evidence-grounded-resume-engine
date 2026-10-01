@@ -6,7 +6,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [1.0.0] - RELEASE_DATE
+## [1.0.0] - 2026-10-01
 
 First release - see [docs/releases/v1.0.0.md](docs/releases/v1.0.0.md).
 

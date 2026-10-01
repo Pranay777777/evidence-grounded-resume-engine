@@ -7,7 +7,7 @@
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**Live demo:** DEMO_URL - a read-only Hugging Face Space over a synthetic
+**Live demo:** <https://huggingface.co/spaces/7Pranay77/evidence-grounded-resume-engine> - a read-only Hugging Face Space over a synthetic
 career ([ADR-020](docs/adr/0020-public-demo.md)). The samples replay drafts
 real models wrote and judge them live, with no model call.
 
@@ -67,7 +67,7 @@ Measured numbers only; each links to the committed report that produced it.
 
 | Metric | Value | How measured |
 |---|---|---|
-| Fabrication rate (output) | **pending human labels** - 213 bullets from 3 models collected | golden set ([ADR-010](docs/adr/0010-golden-set-and-evals.md)); tooling and CI gate in place |
+| Fabrication rate (output) | **0%** of kept bullets unsupported (0 of 53; 95% upper bound 7%) - before the gate: 23% | [golden set](docs/results/eval.md): 110 human-labelled bullets of 213, from cohere/north-mini-code:free, nvidia/nemotron-3-super-120b-a12b:free, poolside/laguna-s-2.1:free; [ADR-010](docs/adr/0010-golden-set-and-evals.md) |
 | Verifier, full gate at 0.95 | **0% false accept · 0% false reject** (NLI alone: 15% · 0%) | [calibration](docs/results/verifier-calibration.md): 21 labelled pairs incl. 3 real embellished bullets; in-sample, see ADR-008 |
 | Prompt-injection suite | **100%** with `generate-v2` (v1: 94%) | [34 payloads](docs/results/redteam.md) mapped to OWASP LLM Top 10 2026; every payload assumed obeyed |
 | Retrieval, hybrid bge-small + rerank | **Recall@1 0.80 · Recall@10 1.00 · MRR 0.97** (BM25: 0.57 · 0.93 · 0.75) | [ablation](docs/results/retrieval-ablation.md), synthetic benchmark of 20 queries |
