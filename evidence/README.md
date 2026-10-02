@@ -59,3 +59,18 @@ evidence:
 
 Only `verified` records are citable. Unverified ones are stored, visible, and
 ignored by the generator.
+
+## Render the résumé
+
+No model is involved: every bullet is the exact statement of a **verified** record, with its
+ID and a link to its proof (the artifact, else the project's repository). A private profile
+chooses and orders the records and holds the header; a selected record that is missing,
+unverified or rejected stops the build.
+
+```bash
+python -m grounded.resume render --profile evidence/private/profile.yaml \
+    --out evidence/private/resume.html --pdf evidence/private/resume.pdf
+```
+
+The PDF is printed by a local Chromium-family browser in headless mode (Edge on Windows,
+Chrome or Chromium elsewhere; `--browser PATH` to choose). Self-attested records carry a †.
