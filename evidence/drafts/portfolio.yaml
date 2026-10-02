@@ -37,7 +37,7 @@ evidence:
 
   - id: copilot-eval-specs
     kind: metric
-    statement: Wrote an evaluation suite of 50 plain-English pipeline specs for the copilot, each recorded once against a live model and replayed in CI.
+    statement: Wrote a 50-spec evaluation suite for the copilot; recorded specs replay in CI as a regression gate.
     project: agentic-pipeline-copilot
     month: 2026-10
     metric: {value: 50, unit: eval specs}
@@ -116,7 +116,7 @@ evidence:
   # ---- asl-realtime-inference ----
   - id: asl-int8-latency
     kind: metric
-    statement: The ASL recognizer's INT8 ONNX model runs at a 1.33 ms median per image on CPU, against 120.1 ms for the original Keras model.
+    statement: The ASL recognizer's INT8 ONNX model runs at a 1.33 ms median per image on CPU, against 120.1 ms for the original Keras model, including the switch from Keras to ONNX Runtime.
     project: asl-realtime-inference
     month: 2026-10
     metric: {value: 1.33, unit: ms p50 per image}
