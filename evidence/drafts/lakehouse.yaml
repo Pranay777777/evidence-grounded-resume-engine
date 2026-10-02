@@ -95,3 +95,36 @@ evidence:
     month: 2026-09
     skills: [observability, debugging, streamlit]
     artifact_url: https://github.com/Pranay777777/metadata-driven-lakehouse/blob/main/docs/adr/0019-ops-dashboard.md
+
+  # ---- added 2026-10-02 from the résumé's lakehouse line, each checked against the repo ----
+  - id: lakehouse-schema-drift
+    kind: achievement
+    statement: Built schema-drift detection with an explicit evolution policy into the lakehouse's ingestion.
+    project: metadata-driven-lakehouse
+    month: 2026-09
+    skills: [schema-evolution, data-engineering]
+    artifact_url: https://github.com/Pranay777777/metadata-driven-lakehouse/blob/main/docs/adr/0007-schema-drift.md
+
+  - id: lakehouse-quality-tiers
+    kind: achievement
+    statement: Built a data-quality engine for the lakehouse with three severity tiers of rules.
+    project: metadata-driven-lakehouse
+    month: 2026-09
+    skills: [data-quality, python]
+    artifact_url: https://github.com/Pranay777777/metadata-driven-lakehouse/blob/main/docs/adr/0009-data-quality-engine.md
+
+  - id: lakehouse-lineage
+    kind: achievement
+    statement: Emitted column-level lineage from the lakehouse via OpenLineage, viewable in Marquez.
+    project: metadata-driven-lakehouse
+    month: 2026-09
+    skills: [openlineage, lineage, data-governance]
+    artifact_url: https://github.com/Pranay777777/metadata-driven-lakehouse/blob/main/docs/adr/0012-openlineage.md
+
+  - id: lakehouse-replay
+    kind: achievement
+    statement: Added a replay command to the lakehouse that deliberately rewinds a source's watermark to reprocess data.
+    project: metadata-driven-lakehouse
+    month: 2026-09
+    skills: [data-engineering, incremental-loading]
+    artifact_url: https://github.com/Pranay777777/metadata-driven-lakehouse#readme

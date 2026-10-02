@@ -173,3 +173,36 @@ evidence:
     month: 2026-10
     skills: [deployment, render, postgres]
     artifact_url: https://skillswap-web-xhfs.onrender.com
+
+  # ---- added from the résumé's project lines, each checked against the repo ----
+  - id: copilot-agents
+    kind: achievement
+    statement: Built the copilot as planner, generator and critic agents grounded in a lakehouse metadata catalog.
+    project: agentic-pipeline-copilot
+    month: 2026-10
+    skills: [llm-agents, multi-agent, rag]
+    artifact_url: https://github.com/Pranay777777/agentic-pipeline-copilot/blob/main/docs/adr/0004-planner-generator-critic.md
+
+  - id: copilot-self-correction
+    kind: achievement
+    statement: Gave the copilot a self-correction loop that sends a failing notebook back to the generator for at most two rounds.
+    project: agentic-pipeline-copilot
+    month: 2026-10
+    skills: [llm-agents, self-correction]
+    artifact_url: https://github.com/Pranay777777/agentic-pipeline-copilot/blob/main/docs/adr/0005-sandbox-validator-correction.md
+
+  - id: copilot-static-gate-tests
+    kind: achievement
+    statement: Added a static-analysis gate and generated tests that every copilot notebook must pass before a pull request is opened.
+    project: agentic-pipeline-copilot
+    month: 2026-10
+    skills: [static-analysis, testing, llm-agents]
+    artifact_url: https://github.com/Pranay777777/agentic-pipeline-copilot/blob/main/docs/adr/0006-static-gate-generated-tests-pull-requests.md
+
+  - id: copilot-replay-cost-governor
+    kind: achievement
+    statement: Added deterministic record/replay of model calls and a per-run cost governor to the copilot.
+    project: agentic-pipeline-copilot
+    month: 2026-10
+    skills: [llm-ops, testing, cost-control]
+    artifact_url: https://github.com/Pranay777777/agentic-pipeline-copilot/blob/main/docs/adr/0007-mcp-tools-replay-cost-governor.md
