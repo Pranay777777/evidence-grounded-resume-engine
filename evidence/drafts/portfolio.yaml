@@ -1,0 +1,175 @@
+# Drafts drawn from public repositories on 2026-10-02. Every figure was read from the
+# linked artifact that day, but none is marked verified: verifying is the candidate's
+# act, not the drafter's. Deliberately left out: the ASL accuracy (scored on images that
+# may overlap training - the model card says so) and the copilot's "first try" rate
+# (inconsistent in its README; to be fixed before it can be cited).
+#   python -m grounded.evidence check evidence/drafts/portfolio.yaml
+#   python -m grounded.evidence load  evidence/drafts/portfolio.yaml
+#   python -m grounded.evidence verify <id> --method artifact --by "<who checked>"
+projects:
+  - id: agentic-pipeline-copilot
+    name: agentic-pipeline-copilot
+    summary: Turns a plain-English data spec into a validated, tested PySpark notebook and an opened pull request.
+    repo_url: https://github.com/Pranay777777/agentic-pipeline-copilot
+  - id: evidence-grounded-resume-engine
+    name: evidence-grounded-resume-engine
+    summary: Résumé generation where every claim cites a verified evidence record and unsupported claims are dropped.
+    repo_url: https://github.com/Pranay777777/evidence-grounded-resume-engine
+  - id: asl-realtime-inference
+    name: asl-realtime-inference
+    summary: Real-time ASL alphabet recognizer with ONNX FP32/INT8 inference and a calibrated abstain threshold.
+    repo_url: https://github.com/Pranay777777/asl-realtime-inference
+  - id: neighborhood-skill-swap
+    name: neighborhood-skill-swap
+    summary: Full-stack skill-swap board - React, FastAPI, Postgres - with hardened auth and tested authorization.
+    repo_url: https://github.com/Pranay777777/Neighborhood-Skill-Swap-Platform
+
+evidence:
+  # ---- agentic-pipeline-copilot ----
+  - id: copilot-catalog-recall5
+    kind: metric
+    statement: The copilot's BM25 catalog retrieval reaches Recall@5 of 0.94 on 24 labelled questions over 49 documents.
+    project: agentic-pipeline-copilot
+    month: 2026-10
+    metric: {value: 0.94, unit: Recall@5}
+    skills: [retrieval, bm25, evaluation]
+    artifact_url: https://github.com/Pranay777777/agentic-pipeline-copilot/blob/main/docs/results/catalog-retrieval.md
+
+  - id: copilot-eval-specs
+    kind: metric
+    statement: Wrote an evaluation suite of 50 plain-English pipeline specs for the copilot, each recorded once against a live model and replayed in CI.
+    project: agentic-pipeline-copilot
+    month: 2026-10
+    metric: {value: 50, unit: eval specs}
+    skills: [llm-evaluation, ci]
+    artifact_url: https://github.com/Pranay777777/agentic-pipeline-copilot/blob/main/evals/specs.json
+
+  - id: copilot-sandbox
+    kind: achievement
+    statement: Built a Docker sandbox that runs generated notebooks as non-root with network, DNS and root writes blocked, checked in CI on every push.
+    project: agentic-pipeline-copilot
+    month: 2026-10
+    skills: [docker, security, sandboxing]
+    artifact_url: https://github.com/Pranay777777/agentic-pipeline-copilot#results
+
+  - id: copilot-opened-pr
+    kind: achievement
+    statement: The copilot opened a pull request with a generated notebook and its tests on a demo repository, leaving the merge to a human.
+    project: agentic-pipeline-copilot
+    month: 2026-10
+    skills: [llm-agents, github-api]
+    artifact_url: https://github.com/Pranay777777/copilot-playground/pull/1
+
+  - id: copilot-mcp-server
+    kind: achievement
+    statement: Exposed the copilot's catalog and notebook gates as tools over the Model Context Protocol.
+    project: agentic-pipeline-copilot
+    month: 2026-10
+    skills: [mcp, llm-tools]
+    artifact_url: https://github.com/Pranay777777/agentic-pipeline-copilot/blob/main/docs/adr/0007-mcp-tools-replay-cost-governor.md
+
+  # ---- evidence-grounded-resume-engine ----
+  - id: engine-golden-set-size
+    kind: metric
+    statement: Labelled 110 model-generated résumé bullets by hand to build the engine's golden evaluation set.
+    project: evidence-grounded-resume-engine
+    month: 2026-10
+    metric: {value: 110, unit: labelled bullets}
+    skills: [llm-evaluation, data-labelling]
+    artifact_url: https://github.com/Pranay777777/evidence-grounded-resume-engine/blob/main/docs/results/eval.md
+
+  - id: engine-raw-fabrication
+    kind: metric
+    statement: On the golden set, 23% of bullets written by three free models were unsupported by their cited evidence before the grounding gate.
+    project: evidence-grounded-resume-engine
+    month: 2026-10
+    metric: {value: 23, unit: percent unsupported before the gate}
+    skills: [llm-evaluation, hallucination]
+    artifact_url: https://github.com/Pranay777777/evidence-grounded-resume-engine/blob/main/docs/results/eval.md
+
+  - id: engine-kept-fabrication
+    kind: metric
+    statement: On the golden set, none of the 53 bullets the grounding gate kept was unsupported, with a 95% upper bound of 7%.
+    project: evidence-grounded-resume-engine
+    month: 2026-10
+    metric: {value: 0, unit: percent unsupported among kept bullets}
+    skills: [llm-evaluation, nli, guardrails]
+    artifact_url: https://github.com/Pranay777777/evidence-grounded-resume-engine/blob/main/docs/results/eval.md
+
+  - id: engine-redteam
+    kind: metric
+    statement: The engine passes all 34 payloads of a prompt-injection red-team suite mapped to the OWASP Top 10 for LLM Applications 2026, with the generate-v2 prompt.
+    project: evidence-grounded-resume-engine
+    month: 2026-09
+    metric: {value: 34, unit: red-team payloads passed}
+    skills: [llm-security, prompt-injection, owasp]
+    artifact_url: https://github.com/Pranay777777/evidence-grounded-resume-engine/blob/main/docs/results/redteam.md
+
+  - id: engine-release
+    kind: achievement
+    statement: Released evidence-grounded-resume-engine v1.0.2 with a public read-only demo on Hugging Face Spaces.
+    project: evidence-grounded-resume-engine
+    month: 2026-10
+    skills: [release, huggingface]
+    artifact_url: https://github.com/Pranay777777/evidence-grounded-resume-engine/releases/tag/v1.0.2
+
+  # ---- asl-realtime-inference ----
+  - id: asl-int8-latency
+    kind: metric
+    statement: The ASL recognizer's INT8 ONNX model runs at a 1.33 ms median per image on CPU, against 120.1 ms for the original Keras model.
+    project: asl-realtime-inference
+    month: 2026-10
+    metric: {value: 1.33, unit: ms p50 per image}
+    skills: [onnx, quantization, inference-optimisation]
+    artifact_url: https://github.com/Pranay777777/asl-realtime-inference/blob/main/MODEL_CARD.md
+
+  - id: asl-int8-size
+    kind: metric
+    statement: Quantising the ASL recognizer to INT8 ONNX shrank it from 24.96 MB as a Keras model to 2.69 MB.
+    project: asl-realtime-inference
+    month: 2026-10
+    metric: {value: 2.69, unit: MB}
+    skills: [onnx, quantization]
+    artifact_url: https://github.com/Pranay777777/asl-realtime-inference/blob/main/MODEL_CARD.md
+
+  - id: asl-calibration
+    kind: metric
+    statement: Temperature scaling cut the ASL recognizer's expected calibration error from 0.072 to 0.001 on images not used to fit it.
+    project: asl-realtime-inference
+    month: 2026-10
+    metric: {value: 0.001, unit: expected calibration error}
+    skills: [calibration, ml-reliability]
+    artifact_url: https://github.com/Pranay777777/asl-realtime-inference/blob/main/MODEL_CARD.md
+
+  # ---- neighborhood-skill-swap ----
+  - id: swap-refresh-rotation
+    kind: achievement
+    statement: Implemented refresh-token rotation with reuse detection that revokes the whole token family in the skill-swap API.
+    project: neighborhood-skill-swap
+    month: 2026-10
+    skills: [authentication, jwt, fastapi, security]
+    artifact_url: https://github.com/Pranay777777/Neighborhood-Skill-Swap-Platform/blob/main/backend/app/routes/auth.py
+
+  - id: swap-idor-test
+    kind: achievement
+    statement: Wrote a parametrised authorization test proving one user cannot read or change another user's objects on every owned-object route of the skill-swap API.
+    project: neighborhood-skill-swap
+    month: 2026-10
+    skills: [authorization, idor, pytest, security]
+    artifact_url: https://github.com/Pranay777777/Neighborhood-Skill-Swap-Platform/blob/main/backend/tests/test_authz.py
+
+  - id: swap-e2e-ci
+    kind: achievement
+    statement: Added Playwright end-to-end tests that run in CI against the skill-swap app's full Docker Compose stack, including email-link flows through a local mail server.
+    project: neighborhood-skill-swap
+    month: 2026-10
+    skills: [playwright, e2e-testing, docker-compose, ci]
+    artifact_url: https://github.com/Pranay777777/Neighborhood-Skill-Swap-Platform/actions/workflows/ci.yml
+
+  - id: swap-live-deploy
+    kind: achievement
+    statement: Deployed the skill-swap app on free tiers - Render for the API and site, Neon for Postgres - with seeded demo accounts.
+    project: neighborhood-skill-swap
+    month: 2026-10
+    skills: [deployment, render, postgres]
+    artifact_url: https://skillswap-web-xhfs.onrender.com
