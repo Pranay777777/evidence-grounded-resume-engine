@@ -69,12 +69,21 @@ def label(
     ask: Callable[[str], str] = input,
     show: Callable[[str], None] = print,
     limit: int | None = None,
+    paraphrases_first: bool = False,
 ) -> tuple[int, int]:
-    """Returns (labelled now, still unlabelled)."""
+    """Returns (labelled now, still unlabelled).
+
+    `paraphrases_first` asks about the bullets that add the most words their evidence lacks
+    before the ones that copy it - the hard cases, where the gate is actually tested. It only
+    changes the order of the questions; the file keeps its order and no answer is suggested.
+    """
     items = read_items(path)
     titles = {j.id: j.title for j in jobs.jds}
+    queue = list(items)
+    if paraphrases_first:
+        queue.sort(key=lambda i: -len(new_words(i.premise, i.text)) if i.premise else 0)
     done = 0
-    for item in items:
+    for item in queue:
         if item.supported is not None:
             continue
         if limit is not None and done >= limit:

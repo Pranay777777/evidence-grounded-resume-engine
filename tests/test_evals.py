@@ -664,3 +664,21 @@ def test_labelling_shows_new_words_and_honours_a_limit(tmp_path: Path) -> None:
     assert "NEW:      (nothing - every word is in the evidence)" in shown
     assert label(path, jobs, "Pranay", answers("n", ""), shown.append) == (1, 0)
     assert "NEW:      Kubernetes" in shown  # "on" is filler
+
+
+def test_paraphrases_first_reorders_questions_not_the_file(tmp_path: Path) -> None:
+    path = tmp_path / "golden.jsonl"
+    copy = item("copy")
+    small = item("small", text="Built Airflow DAGs on Kubernetes.")
+    big = item("big", text="Architected Airflow DAGs on Kubernetes with Helm.")
+    write_items(path, [copy, small, big])
+    shown: list[str] = []
+    jobs = JobSet(jds=[Job(id="j1", title="T", text="x")])
+    # Every reply is "skip": the order of the questions is all this checks, and no label is set.
+    label(path, jobs, "Pranay", answers("s", "s", "s"), shown.append, paraphrases_first=True)
+    asked = [
+        line.split(" | ")[0].removeprefix("\n-- ") for line in shown if line.startswith("\n-- ")
+    ]
+    assert asked == ["big", "small", "copy"]
+    assert [i.id for i in read_items(path)] == ["copy", "small", "big"]
+    assert all(i.supported is None for i in read_items(path))

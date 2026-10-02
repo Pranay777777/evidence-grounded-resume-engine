@@ -2,7 +2,8 @@
 
 python -m grounded.evals collect --model <pinned-id> [--prompt generate-v1]
                                  [--out benchmarks/golden/golden.jsonl]
-python -m grounded.evals label --by "Your Name" [--file benchmarks/golden/golden.jsonl]
+python -m grounded.evals label --by "Your Name" [--limit 40] [--paraphrases-first]
+                               [--file benchmarks/golden/golden.jsonl]
 python -m grounded.evals run [--file benchmarks/golden/golden.jsonl] [--out docs/results/eval.md]
                              [--check benchmarks/golden/limits.yaml]
 python -m grounded.evals compare [--out docs/results/model-comparison.md]
@@ -64,6 +65,11 @@ def main(argv: list[str] | None = None) -> int:
     lab.add_argument("--by", required=True)
 
     lab.add_argument("--limit", type=int, help="stop after labelling this many")
+    lab.add_argument(
+        "--paraphrases-first",
+        action="store_true",
+        help="ask about bullets that add words their evidence lacks before ones that copy it",
+    )
     lab.add_argument("--file", type=Path, default=GOLDEN)
     run = sub.add_parser("run")
     run.add_argument("--file", type=Path, default=GOLDEN)
@@ -188,7 +194,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "label":
-        done, left = label(args.file, jobs, args.by, ask=input, limit=args.limit)
+        done, left = label(
+            args.file,
+            jobs,
+            args.by,
+            ask=input,
+            limit=args.limit,
+            paraphrases_first=args.paraphrases_first,
+        )
         print(f"\nlabelled {done} this session; {left} still unlabelled")
         return 0
 
