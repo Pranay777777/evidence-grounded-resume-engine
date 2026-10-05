@@ -30,7 +30,7 @@ dev = [
   "pre-commit>=4.6.2",
   "pip-audit>=2.10.1",
   "types-PyYAML>=6.0",
-  "httpx2>=2.13",
+  "httpx2>=2.13.1",
   "opentelemetry-sdk>=1.30",
 ]
 
