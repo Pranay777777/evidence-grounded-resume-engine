@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterator
-from datetime import date
 from pathlib import Path
 
 import pytest
@@ -73,6 +72,17 @@ STORE = EvidenceFile.model_validate(
                 "artifact_url": "https://proj.example.org",
             },
             {
+                "id": "edu-degree",
+                "kind": "education",
+                "statement": "BSc, Physics · Uni",
+            },
+            {
+                "id": "edu-gpa",
+                "kind": "metric",
+                "statement": "Holds a CGPA of 8.3 in the BSc.",
+                "metric": {"value": 8.3, "unit": "CGPA"},
+            },
+            {
                 "id": "proj-rejected",
                 "kind": "achievement",
                 "statement": "Claimed something wrong.",
@@ -100,6 +110,8 @@ def session() -> Iterator[Session]:
         verify(s, "proj-feature", VerificationMethod.THIRD_PARTY, "A reviewer")
         verify(s, "acme-work", VerificationMethod.SELF_ATTESTED, "Pranay")
         verify(s, "proj-demo", VerificationMethod.ARTIFACT, "Pranay")
+        verify(s, "edu-degree", VerificationMethod.SELF_ATTESTED, "Pranay")
+        verify(s, "edu-gpa", VerificationMethod.SELF_ATTESTED, "Pranay")
         reject(s, "proj-rejected", "Pranay")
         yield s
 
@@ -150,27 +162,38 @@ def test_unknown_role_or_project_stops_the_build(session: Session) -> None:
         build(session, profile(experience=[{"role": "ghost", "evidence": ["acme-work"]}]))
 
 
-def test_html_escapes_links_and_marks_self_attested(session: Session) -> None:
-    html = render(build(session, profile()), today=date(2026, 10, 2))
+def test_html_escapes_and_links_without_marks(session: Session) -> None:
+    resume = build(session, profile())
+    html = render(resume)
     assert "<script>" not in html and "&lt;script&gt; &amp; quoting-safe" in html
     assert "Acme &lt;Corp&gt;" in html
     # each bullet links to its proof; record ids stay out of the page
     for ident in ("acme-work", "proj-metric", "proj-feature"):
         assert ident not in html
     assert '<a href="https://github.com/x/proj/actions">The proj suite has 99 tests.</a>' in html
-    # only the self-attested record carries the dagger, inline at its end
-    assert html.count("†</li>") == 1 and "<sup>" not in html
-    assert "Built an internal tool at Acme. †</li>" in html
+    # self-attested stays in the data, but the page carries no mark for it
+    assert resume.experience[0].bullets[0].self_attested
+    assert "†" not in html and "<sup>" not in html
+    assert "<li>Built an internal tool at Acme.</li>" in html
     assert "Apr 2026 \u2013 Sep 2026" in html
-    assert "Generated 2026-10-02 from 3 verified evidence records" in html
-    assert "† self-attested" in html
+    assert (
+        '<div class="footer">Generated from 3 evidence records · project bullets link to '
+        "public proof · github.com/Pranay777777/evidence-grounded-resume-engine</div>"
+    ) in html
+    assert render(resume) == html  # no date or other state: the same input, the same page
+
+
+def test_education_reads_as_one_line(session: Session) -> None:
+    html = render(build(session, profile(education=["edu-degree", "edu-gpa"])))
+    assert '<div class="inline"><span>BSc, Physics · Uni</span><span>CGPA 8.3</span></div>' in html
+    assert "Holds a CGPA" not in html  # the metric shows as its unit and value
 
 
 def test_a_demo_link_comes_from_a_record_verified_by_its_url(session: Session) -> None:
     demo = {"project": "proj", "evidence": ["proj-metric"], "demo": "proj-demo"}
     resume = build(session, profile(projects=[demo]))
     assert [b.evidence_id for b in resume.cited] == ["acme-work", "proj-metric", "proj-demo"]
-    html = render(resume, today=date(2026, 10, 2))
+    html = render(resume)
     assert '<a class="demo" href="https://proj.example.org/">live demo</a>' in html
     assert "Deployed proj as a public demo." not in html  # the link, not a bullet
     # a record can be both a bullet and the demo, and is counted once
@@ -228,6 +251,6 @@ def test_pdf_pages_counts_page_objects(tmp_path: Path) -> None:
 @pytest.mark.skipif(find_browser(None) is None, reason="no Chromium-family browser")
 def test_the_printed_resume_is_one_page(session: Session, tmp_path: Path) -> None:
     html, pdf = tmp_path / "resume.html", tmp_path / "resume.pdf"
-    html.write_text(render(build(session, profile()), today=date(2026, 10, 2)), encoding="utf-8")
+    html.write_text(render(build(session, profile())), encoding="utf-8")
     print_pdf(find_browser(None) or "", html, pdf)
     assert pdf_pages(pdf) == 1

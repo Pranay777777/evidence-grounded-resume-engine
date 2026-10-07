@@ -127,7 +127,7 @@ def build(session: Session, profile: Profile) -> Resume:
             return None
         return record
 
-    def bullet(evidence_id: str) -> Bullet | None:
+    def bullet(evidence_id: str, compact: bool = False) -> Bullet | None:
         if evidence_id in used:
             problems.append(f"{evidence_id}: selected twice")
             return None
@@ -136,16 +136,19 @@ def build(session: Session, profile: Profile) -> Resume:
         if record is None:
             return None
         repo = record.project.repo_url if record.project else None
+        text = record.statement
+        if compact and record.metric_unit and record.metric_value is not None:
+            text = f"{record.metric_unit} {record.metric_value.normalize():f}"  # "CGPA 8.3"
         return Bullet(
-            text=record.statement,
+            text=text,
             evidence_id=record.id,
             revision=record.revision,
             link=record.artifact_url or repo,
             self_attested=record.verification_method == "self_attested",
         )
 
-    def bullets(ids: list[str]) -> list[Bullet]:
-        return [b for b in (bullet(i) for i in ids) if b is not None]
+    def bullets(ids: list[str], compact: bool = False) -> list[Bullet]:
+        return [b for b in (bullet(i, compact) for i in ids) if b is not None]
 
     def demo(evidence_id: str | None) -> Bullet | None:
         """The demo link comes from a record verified by that very URL - never typed in."""
@@ -188,7 +191,9 @@ def build(session: Session, profile: Profile) -> Resume:
                 demo(project_sec.demo),
             )
         )
-    education, certifications = bullets(profile.education), bullets(profile.certifications)
+    # education reads as one line: a metric record shows as its unit and value
+    education = bullets(profile.education, compact=True)
+    certifications = bullets(profile.certifications)
     if problems:
         raise ResumeError("cannot build the résumé:\n  " + "\n  ".join(problems))
     return Resume(profile, experience, projects, education, certifications)

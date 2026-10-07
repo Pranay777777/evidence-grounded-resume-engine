@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import date
 from html import escape
 
 from grounded.resume.build import Block, Bullet, Resume
@@ -40,11 +39,9 @@ li a, .inline a { color: inherit; text-decoration: none; }
 
 
 def _cited(b: Bullet) -> str:
-    """The statement, linked to its proof; a self-attested one ends with an inline dagger."""
+    """The statement, linked to its proof when it has one."""
     text = escape(b.text)
-    if b.link:
-        text = f'<a href="{escape(b.link)}">{text}</a>'
-    return text + (" †" if b.self_attested else "")
+    return f'<a href="{escape(b.link)}">{text}</a>' if b.link else text
 
 
 def _bullet(b: Bullet) -> str:
@@ -80,7 +77,7 @@ def _block(blk: Block, sub_right: bool) -> str:
     )
 
 
-def render(resume: Resume, today: date | None = None) -> str:
+def render(resume: Resume) -> str:
     p = resume.profile
     contact = " · ".join(
         f'<a href="{escape(str(c.url))}">{escape(c.label)}</a>' if c.url else escape(c.label)
@@ -106,14 +103,10 @@ def render(resume: Resume, today: date | None = None) -> str:
         parts.append("<h2>Education</h2>" + _inline(resume.education))
     if resume.certifications:
         parts.append("<h2>Certifications</h2>" + _inline(resume.certifications))
-    stamp = (today or date.today()).isoformat()
-    has_self = any(b.self_attested for b in resume.cited)
     parts.append(
-        f'<div class="footer">Generated {stamp} from {len(resume.cited)} verified evidence '
-        "records; "
-        "each bullet is a record's exact statement and links to its proof"
-        + ("; † self-attested" if has_self else "")
-        + ". github.com/Pranay777777/evidence-grounded-resume-engine</div>"
+        f'<div class="footer">Generated from {len(resume.cited)} evidence records · '
+        "project bullets link to public proof · "
+        "github.com/Pranay777777/evidence-grounded-resume-engine</div>"
     )
     return (
         f'<!doctype html><html lang="en"><head><meta charset="utf-8">'
