@@ -76,6 +76,8 @@ STORE = EvidenceFile.model_validate(
                 "kind": "education",
                 "statement": "BSc, Physics · Uni",
             },
+            {"id": "cert-one", "kind": "certification", "statement": "Certified One (XY-100)."},
+            {"id": "cert-two", "kind": "certification", "statement": "Certified Two (XY-200)"},
             {
                 "id": "edu-gpa",
                 "kind": "metric",
@@ -112,6 +114,8 @@ def session() -> Iterator[Session]:
         verify(s, "proj-demo", VerificationMethod.ARTIFACT, "Pranay")
         verify(s, "edu-degree", VerificationMethod.SELF_ATTESTED, "Pranay")
         verify(s, "edu-gpa", VerificationMethod.SELF_ATTESTED, "Pranay")
+        verify(s, "cert-one", VerificationMethod.SELF_ATTESTED, "Pranay")
+        verify(s, "cert-two", VerificationMethod.SELF_ATTESTED, "Pranay")
         reject(s, "proj-rejected", "Pranay")
         yield s
 
@@ -187,6 +191,21 @@ def test_education_reads_as_one_line(session: Session) -> None:
     html = render(build(session, profile(education=["edu-degree", "edu-gpa"])))
     assert '<div class="inline"><span>BSc, Physics · Uni</span><span>CGPA 8.3</span></div>' in html
     assert "Holds a CGPA" not in html  # the metric shows as its unit and value
+
+
+def test_inline_items_drop_their_full_stop_but_the_record_keeps_it(session: Session) -> None:
+    resume = build(session, profile(certifications=["cert-one", "cert-two"]))
+    html = render(resume)
+    assert (
+        '<div class="inline"><span>Certified One (XY-100)</span>'
+        "<span>Certified Two (XY-200)</span></div>"
+    ) in html
+    assert [b.text for b in resume.certifications] == [
+        "Certified One (XY-100).",
+        "Certified Two (XY-200)",
+    ]
+    assert "<li>The proj suite has 99 tests.</li>" not in html  # bullets keep theirs
+    assert "The proj suite has 99 tests.</a></li>" in html
 
 
 def test_a_demo_link_comes_from_a_record_verified_by_its_url(session: Session) -> None:

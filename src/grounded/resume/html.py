@@ -38,9 +38,11 @@ li a, .inline a { color: inherit; text-decoration: none; }
 """
 
 
-def _cited(b: Bullet) -> str:
-    """The statement, linked to its proof when it has one."""
-    text = escape(b.text)
+def _cited(b: Bullet, inline: bool = False) -> str:
+    """The statement, linked to its proof when it has one. In a one-line list the trailing
+    full stop is dropped, so items join cleanly; the record itself is unchanged."""
+    text = b.text[:-1] if inline and b.text.endswith(".") else b.text
+    text = escape(text)
     return f'<a href="{escape(b.link)}">{text}</a>' if b.link else text
 
 
@@ -50,7 +52,7 @@ def _bullet(b: Bullet) -> str:
 
 def _inline(bullets: list[Bullet]) -> str:
     """Short records (degrees, certificates) on one line each section, still linked."""
-    items = "".join(f"<span>{_cited(b)}</span>" for b in bullets)
+    items = "".join(f"<span>{_cited(b, inline=True)}</span>" for b in bullets)
     return f'<div class="inline">{items}</div>'
 
 
