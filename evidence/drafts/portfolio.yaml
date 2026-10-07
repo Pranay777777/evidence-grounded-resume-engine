@@ -141,6 +141,14 @@ evidence:
     skills: [calibration, ml-reliability]
     artifact_url: https://github.com/Pranay777777/asl-realtime-inference/blob/main/MODEL_CARD.md
 
+  - id: asl-live-demo
+    kind: achievement
+    statement: Published the ASL recognizer as a Hugging Face Space that runs its INT8 model in the browser, so no image is uploaded.
+    project: asl-realtime-inference
+    month: 2026-10
+    skills: [onnxruntime-web, deployment]
+    artifact_url: https://huggingface.co/spaces/7Pranay77/asl-alphabet-recognizer
+
   # ---- neighborhood-skill-swap ----
   - id: swap-refresh-rotation
     kind: achievement

@@ -28,7 +28,9 @@ ul { margin: .6mm 0 0; padding-left: 4.5mm; }
 li { margin: .2mm 0; }
 .inline { margin: .6mm 0 0; }
 .inline span + span::before { content: " · "; color: #7a8792; }
-.cite { font-size: 7pt; color: #7a8792; text-decoration: none; white-space: nowrap; }
+li a, .inline a { color: inherit; text-decoration: none; }
+.block-title a.demo { font-weight: 400; font-size: 9pt; color: #0f5c8c;
+                      text-decoration: underline; }
 .skills div { margin: .4mm 0; }
 .skills b { font-weight: 600; }
 .footer { margin-top: 5mm; font-size: 7.5pt; color: #7a8792; border-top: 1px solid #e3e9ee;
@@ -37,20 +39,21 @@ li { margin: .2mm 0; }
 """
 
 
+def _cited(b: Bullet) -> str:
+    """The statement, linked to its proof; a self-attested one ends with an inline dagger."""
+    text = escape(b.text)
+    if b.link:
+        text = f'<a href="{escape(b.link)}">{text}</a>'
+    return text + (" †" if b.self_attested else "")
+
+
 def _bullet(b: Bullet) -> str:
-    mark = "<sup>†</sup>" if b.self_attested else ""
-    ref = escape(b.evidence_id)
-    cite = (
-        f' <a class="cite" href="{escape(b.link)}">[{ref}]</a>'
-        if b.link
-        else f' <span class="cite">[{ref}]</span>'
-    )
-    return f"<li>{escape(b.text)}{mark}{cite}</li>"
+    return f"<li>{_cited(b)}</li>"
 
 
 def _inline(bullets: list[Bullet]) -> str:
-    """Short records (degrees, certificates) on one line each section, still cited."""
-    items = "".join(f"<span>{_bullet(b)[4:-5]}</span>" for b in bullets)  # strip <li></li>
+    """Short records (degrees, certificates) on one line each section, still linked."""
+    items = "".join(f"<span>{_cited(b)}</span>" for b in bullets)
     return f'<div class="inline">{items}</div>'
 
 
@@ -58,6 +61,8 @@ def _block(blk: Block, sub_right: bool) -> str:
     title = escape(blk.title)
     if blk.link:
         title = f'<a href="{escape(blk.link)}">{title}</a>'
+    if blk.demo and blk.demo.link:
+        title += f' · <a class="demo" href="{escape(blk.demo.link)}">live demo</a>'
     right = (
         f'<span class="block-sub">{escape(blk.subtitle)}</span>'
         if (sub_right and blk.subtitle)

@@ -65,6 +65,13 @@ STORE = EvidenceFile.model_validate(
                 "project": "proj",
             },
             {
+                "id": "proj-demo",
+                "kind": "achievement",
+                "statement": "Deployed proj as a public demo.",
+                "project": "proj",
+                "artifact_url": "https://proj.example.org",
+            },
+            {
                 "id": "proj-rejected",
                 "kind": "achievement",
                 "statement": "Claimed something wrong.",
@@ -91,6 +98,7 @@ def session() -> Iterator[Session]:
         verify(s, "proj-metric", VerificationMethod.ARTIFACT, "Pranay")
         verify(s, "proj-feature", VerificationMethod.THIRD_PARTY, "A reviewer")
         verify(s, "acme-work", VerificationMethod.SELF_ATTESTED, "Pranay")
+        verify(s, "proj-demo", VerificationMethod.ARTIFACT, "Pranay")
         reject(s, "proj-rejected", "Pranay")
         yield s
 
@@ -117,7 +125,7 @@ def test_bullets_are_exact_statements_with_citations(session: Session) -> None:
     ]
     assert proj.bullets[0].link == "https://github.com/x/proj/actions"  # its artifact
     assert proj.bullets[1].link == "https://github.com/x/proj"  # no artifact: the repo
-    assert resume.experience[0].subtitle == "2026-04 \u2013 2026-09"
+    assert resume.experience[0].subtitle == "Apr 2026 \u2013 Sep 2026"
 
 
 @pytest.mark.parametrize(
@@ -141,18 +149,49 @@ def test_unknown_role_or_project_stops_the_build(session: Session) -> None:
         build(session, profile(experience=[{"role": "ghost", "evidence": ["acme-work"]}]))
 
 
-def test_html_escapes_cites_and_marks_self_attested(session: Session) -> None:
+def test_html_escapes_links_and_marks_self_attested(session: Session) -> None:
     html = render(build(session, profile()), today=date(2026, 10, 2))
     assert "<script>" not in html and "&lt;script&gt; &amp; quoting-safe" in html
     assert "Acme &lt;Corp&gt;" in html
+    # each bullet links to its proof; record ids stay out of the page
     for ident in ("acme-work", "proj-metric", "proj-feature"):
-        assert f"[{ident}]" in html
-    assert 'href="https://github.com/x/proj/actions"' in html
-    # only the self-attested record carries the dagger, and the footer explains it
-    assert html.count("<sup>†</sup>") == 1
-    assert "Built an internal tool at Acme.<sup>†</sup>" in html
+        assert ident not in html
+    assert '<a href="https://github.com/x/proj/actions">The proj suite has 99 tests.</a>' in html
+    # only the self-attested record carries the dagger, inline at its end
+    assert html.count("†</li>") == 1 and "<sup>" not in html
+    assert "Built an internal tool at Acme. †</li>" in html
+    assert "Apr 2026 \u2013 Sep 2026" in html
     assert "Generated 2026-10-02 from 3 verified evidence records" in html
     assert "† self-attested" in html
+
+
+def test_a_demo_link_comes_from_a_record_verified_by_its_url(session: Session) -> None:
+    demo = {"project": "proj", "evidence": ["proj-metric"], "demo": "proj-demo"}
+    resume = build(session, profile(projects=[demo]))
+    assert [b.evidence_id for b in resume.cited] == ["acme-work", "proj-metric", "proj-demo"]
+    html = render(resume, today=date(2026, 10, 2))
+    assert '<a class="demo" href="https://proj.example.org/">live demo</a>' in html
+    assert "Deployed proj as a public demo." not in html  # the link, not a bullet
+    # a record can be both a bullet and the demo, and is counted once
+    both = {"project": "proj", "evidence": ["proj-demo"], "demo": "proj-demo"}
+    cited = build(session, profile(projects=[both])).cited
+    assert [b.evidence_id for b in cited] == ["acme-work", "proj-demo"]
+
+
+@pytest.mark.parametrize(
+    ("record", "problem"),
+    [
+        ("proj-feature", "proj-feature: a demo needs a record verified by its URL"),
+        ("proj-draft", "proj-draft: unverified, not verified"),
+        ("nope", "nope: not in the evidence store"),
+    ],
+)
+def test_a_demo_without_a_url_verified_record_stops_the_build(
+    session: Session, record: str, problem: str
+) -> None:
+    demo = {"project": "proj", "evidence": ["proj-metric"], "demo": record}
+    with pytest.raises(ResumeError, match=problem):
+        build(session, profile(projects=[demo]))
 
 
 def test_profile_rejects_unknown_fields(tmp_path: Path) -> None:

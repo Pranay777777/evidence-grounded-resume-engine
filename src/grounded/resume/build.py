@@ -39,6 +39,8 @@ class RoleSection(_Strict):
 class ProjectSection(_Strict):
     project: str
     evidence: list[str] = Field(min_length=1)
+    demo: str | None = None
+    """A record verified by its URL, linked from the header as the live demo."""
 
 
 class Profile(_Strict):
@@ -77,6 +79,7 @@ class Block:
     subtitle: str | None
     link: str | None
     bullets: list[Bullet]
+    demo: Bullet | None = None
 
 
 @dataclass(frozen=True)
@@ -89,30 +92,48 @@ class Resume:
 
     @property
     def cited(self) -> list[Bullet]:
+        """Every record the résumé rests on, once each: bullets, then demos not already cited."""
         blocks = self.experience + self.projects
-        return [b for blk in blocks for b in blk.bullets] + self.education + self.certifications
+        found = [b for blk in blocks for b in blk.bullets] + self.education + self.certifications
+        ids = {b.evidence_id for b in found}
+        return found + [blk.demo for blk in blocks if blk.demo and blk.demo.evidence_id not in ids]
+
+
+_MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+def _month(value: str) -> str:
+    """'2026-04' -> 'Apr 2026' (fixed English names: no locale, so the output is stable)."""
+    year, month = value.split("-")
+    return f"{_MONTHS[int(month) - 1]} {year}"
 
 
 def _months(role: Role) -> str:
-    start, end = role.start_month or "", role.end_month or "present"
-    return f"{start} \u2013 {end}" if start else end  # en dash
+    end = _month(role.end_month) if role.end_month else "present"
+    return f"{_month(role.start_month)} \u2013 {end}" if role.start_month else end  # en dash
 
 
 def build(session: Session, profile: Profile) -> Resume:
     problems: list[str] = []
     used: set[str] = set()
 
-    def bullet(evidence_id: str) -> Bullet | None:
-        if evidence_id in used:
-            problems.append(f"{evidence_id}: selected twice")
-            return None
-        used.add(evidence_id)
+    def citable(evidence_id: str) -> Evidence | None:
         record = session.get(Evidence, evidence_id)
         if record is None:
             problems.append(f"{evidence_id}: not in the evidence store")
             return None
         if not record.citable:
             problems.append(f"{evidence_id}: {record.verification_status}, not verified")
+            return None
+        return record
+
+    def bullet(evidence_id: str) -> Bullet | None:
+        if evidence_id in used:
+            problems.append(f"{evidence_id}: selected twice")
+            return None
+        used.add(evidence_id)
+        record = citable(evidence_id)
+        if record is None:
             return None
         repo = record.project.repo_url if record.project else None
         return Bullet(
@@ -125,6 +146,18 @@ def build(session: Session, profile: Profile) -> Resume:
 
     def bullets(ids: list[str]) -> list[Bullet]:
         return [b for b in (bullet(i) for i in ids) if b is not None]
+
+    def demo(evidence_id: str | None) -> Bullet | None:
+        """The demo link comes from a record verified by that very URL - never typed in."""
+        if evidence_id is None:
+            return None
+        record = citable(evidence_id)
+        if record is None:
+            return None
+        if record.verification_method != "artifact" or not record.artifact_url:
+            problems.append(f"{evidence_id}: a demo needs a record verified by its URL")
+            return None
+        return Bullet(record.statement, record.id, record.revision, record.artifact_url, False)
 
     experience = []
     for role_sec in profile.experience:
@@ -147,7 +180,13 @@ def build(session: Session, profile: Profile) -> Resume:
             problems.append(f"project {project_sec.project}: not in the evidence store")
             continue
         projects.append(
-            Block(project.name, project.summary, project.repo_url, bullets(project_sec.evidence))
+            Block(
+                project.name,
+                project.summary,
+                project.repo_url,
+                bullets(project_sec.evidence),
+                demo(project_sec.demo),
+            )
         )
     education, certifications = bullets(profile.education), bullets(profile.certifications)
     if problems:
