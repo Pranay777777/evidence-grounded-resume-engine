@@ -1,7 +1,7 @@
 """Render the résumé from the evidence store - no model, every bullet a verified record.
 
 python -m grounded.resume render --profile evidence/private/profile.yaml \\
-    --out evidence/private/resume.html [--pdf evidence/private/resume.pdf] [--browser PATH]
+    --out evidence/private/resume.html [--pdf evidence/private/resume.pdf] [--max-pages 1]
 
 The PDF is printed by a local Chromium-family browser in headless mode (Edge ships with
 Windows; Chrome or Chromium elsewhere). Nothing is sent anywhere.
@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -56,6 +57,11 @@ def print_pdf(browser: str, html: Path, pdf: Path) -> None:
         raise RuntimeError(f"{browser} produced no PDF")
 
 
+def pdf_pages(pdf: Path) -> int:
+    """Pages in a browser-printed PDF: its page objects (Chromium leaves them uncompressed)."""
+    return len(re.findall(rb"/Type\s*/Page(?!s)", pdf.read_bytes()))
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         prog="grounded.resume",
@@ -68,6 +74,7 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--out", type=Path, required=True)
     r.add_argument("--pdf", type=Path)
     r.add_argument("--browser", help="Chromium-family browser for the PDF (default: search)")
+    r.add_argument("--max-pages", type=int, help="fail if the PDF runs longer than this")
     args = ap.parse_args(argv)
 
     try:
@@ -92,7 +99,13 @@ def main(argv: list[str] | None = None) -> int:
             print("no Chromium-family browser found; pass --browser", file=sys.stderr)
             return 1
         print_pdf(browser, args.out, args.pdf)
-        print(f"{args.pdf}: printed with {Path(browser).name}")
+        pages = pdf_pages(args.pdf)
+        print(f"{args.pdf}: {pages} page(s), printed with {Path(browser).name}")
+        if args.max_pages is not None and pages > args.max_pages:
+            print(
+                f"the PDF runs to {pages} pages; --max-pages is {args.max_pages}", file=sys.stderr
+            )
+            return 1
     return 0
 
 

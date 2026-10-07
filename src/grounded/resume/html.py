@@ -8,32 +8,32 @@ from html import escape
 from grounded.resume.build import Block, Bullet, Resume
 
 CSS = """
-@page { size: A4; margin: 14mm 15mm; }
+@page { size: A4; margin: 12mm 12mm; }
 * { box-sizing: border-box; }
-body { font: 9.6pt/1.32 "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: #1d232a;
+body { font: 10pt/1.2 "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: #1d232a;
        max-width: 190mm; margin: 0 auto; padding: 8mm 0; }
 h1 { font-size: 20pt; margin: 0; letter-spacing: .2px; }
-.headline { font-size: 11pt; color: #3c4a57; margin: 1mm 0 2mm; }
+.headline { font-size: 11pt; color: #3c4a57; margin: .5mm 0 1mm; }
 .contact { font-size: 9pt; color: #3c4a57; }
 .contact a { color: inherit; }
 h2 { font-size: 10.5pt; text-transform: uppercase; letter-spacing: 1px; color: #0f5c8c;
-     border-bottom: 1px solid #c9d5df; margin: 5mm 0 2mm; padding-bottom: .6mm; }
-.block { margin: 0 0 2mm; break-inside: avoid; }
+     border-bottom: 1px solid #c9d5df; margin: 3mm 0 1.2mm; padding-bottom: .4mm; }
+.block { margin: 0 0 1.2mm; break-inside: avoid; }
 .block-head { display: flex; justify-content: space-between; gap: 4mm; }
 .block-title { font-weight: 600; }
 .block-title a { color: inherit; text-decoration: none; }
 .block-sub { color: #56636f; font-size: 9pt; text-align: right; }
-.summary { color: #56636f; font-size: 9pt; margin: .3mm 0 .6mm; }
-ul { margin: .6mm 0 0; padding-left: 4.5mm; }
-li { margin: .2mm 0; }
-.inline { margin: .6mm 0 0; }
+.summary { color: #56636f; font-size: 9pt; margin: 0; }
+ul { margin: .3mm 0 0; padding-left: 4.5mm; }
+li { margin: 0; }
+.inline { margin: .3mm 0 0; }
 .inline span + span::before { content: " · "; color: #7a8792; }
 li a, .inline a { color: inherit; text-decoration: none; }
 .block-title a.demo { font-weight: 400; font-size: 9pt; color: #0f5c8c;
                       text-decoration: underline; }
-.skills div { margin: .4mm 0; }
+.skills div { margin: 0; }
 .skills b { font-weight: 600; }
-.footer { margin-top: 5mm; font-size: 7.5pt; color: #7a8792; border-top: 1px solid #e3e9ee;
+.footer { margin-top: 3mm; font-size: 7.5pt; color: #7a8792; border-top: 1px solid #e3e9ee;
           padding-top: 1.5mm; }
 @media print { body { padding: 0; } a { color: inherit; } }
 """

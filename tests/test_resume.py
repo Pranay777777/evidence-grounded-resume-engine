@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator
 from datetime import date
 from pathlib import Path
@@ -14,9 +15,9 @@ from grounded.evidence.enums import VerificationMethod
 from grounded.evidence.models import Base
 from grounded.evidence.schema import EvidenceFile
 from grounded.evidence.store import load, reject, verify
-from grounded.resume.__main__ import find_browser
+from grounded.resume.__main__ import find_browser, pdf_pages, print_pdf
 from grounded.resume.build import Profile, ResumeError, build, read_profile
-from grounded.resume.html import render
+from grounded.resume.html import CSS, render
 
 STORE = EvidenceFile.model_validate(
     {
@@ -203,3 +204,30 @@ def test_profile_rejects_unknown_fields(tmp_path: Path) -> None:
 
 def test_find_browser_prefers_an_explicit_path() -> None:
     assert find_browser("/opt/my-chrome") == "/opt/my-chrome"
+
+
+def test_layout_stays_within_the_agreed_limits() -> None:
+    """One page by layout, not by squeezing: margins >= 12 mm, body 9.5-10 pt, lines >= 1.2."""
+    margins = re.search(r"@page \{ size: A4; margin: ([\d.]+)mm ([\d.]+)mm; \}", CSS)
+    assert margins and min(map(float, margins.groups())) >= 12
+    body = re.search(r"body \{ font: ([\d.]+)pt/([\d.]+) ", CSS)
+    assert body
+    size, line_height = map(float, body.groups())
+    assert 9.5 <= size <= 10 and line_height >= 1.2
+    name = re.search(r"h1 \{ font-size: ([\d.]+)pt", CSS)
+    others = [float(x) for x in re.findall(r"font-size: ([\d.]+)pt", CSS)]
+    assert name and float(name.group(1)) == max([*others, size])  # the name stays the biggest
+
+
+def test_pdf_pages_counts_page_objects(tmp_path: Path) -> None:
+    pdf = tmp_path / "x.pdf"
+    pdf.write_bytes(b"<< /Type /Pages /Count 2 >> << /Type /Page >> <</Type/Page/Parent 1 0 R>>")
+    assert pdf_pages(pdf) == 2
+
+
+@pytest.mark.skipif(find_browser(None) is None, reason="no Chromium-family browser")
+def test_the_printed_resume_is_one_page(session: Session, tmp_path: Path) -> None:
+    html, pdf = tmp_path / "resume.html", tmp_path / "resume.pdf"
+    html.write_text(render(build(session, profile()), today=date(2026, 10, 2)), encoding="utf-8")
+    print_pdf(find_browser(None) or "", html, pdf)
+    assert pdf_pages(pdf) == 1
