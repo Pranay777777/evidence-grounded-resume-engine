@@ -7,6 +7,9 @@
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
+**[Build log: a résumé generator that isn't allowed to make things up](docs/build-log.md)** -
+how every claim is checked, and what the gate costs (5-minute read).
+
 **Live demo:** <https://huggingface.co/spaces/7Pranay77/evidence-grounded-resume-engine> - a read-only Hugging Face Space over a synthetic
 career ([ADR-020](docs/adr/0020-public-demo.md)). The samples replay drafts
 real models wrote and judge them live, with no model call.
