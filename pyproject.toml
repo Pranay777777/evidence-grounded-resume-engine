@@ -51,7 +51,7 @@ embeddings = [
   "onnxruntime>=1.17",
   "tokenizers>=0.15",
   "huggingface-hub>=0.20",
-  "numpy>=1.26",
+  "numpy>=2.4.6",
 ]
 
 [build-system]
