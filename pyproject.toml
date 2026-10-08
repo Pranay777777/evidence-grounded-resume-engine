@@ -48,7 +48,7 @@ observability = [
 # The dense embedding model (ADR-004): ONNX via fastembed, no PyTorch.
 embeddings = [
   "fastembed>=0.5",
-  "onnxruntime>=1.17",
+  "onnxruntime>=1.30.0",
   "tokenizers>=0.15",
   "huggingface-hub>=0.20",
   "numpy>=1.26",
