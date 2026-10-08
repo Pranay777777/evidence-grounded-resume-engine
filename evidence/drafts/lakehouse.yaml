@@ -48,7 +48,7 @@ evidence:
 
   - id: lakehouse-arrow-vs-spark
     kind: metric
-    statement: In the lakehouse benchmark at one million rows, the Arrow engine was 16 times faster than the Spark engine.
+    statement: On a 1 vCPU / 3 GB Linux container at one million rows, the lakehouse's Arrow engine was 16 times faster than its Spark engine.
     project: metadata-driven-lakehouse
     month: 2026-09
     metric: {value: 16, unit: times faster}
