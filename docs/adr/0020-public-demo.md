@@ -25,7 +25,8 @@ shows, and visitors spending the model quota until it stops working.
   evidence the benchmarks use, so a reader can check the README's numbers
   against what the demo shows.
 - **Read-only** (`DEMO=true`): visitors get `read_evidence` only - every
-  write returns 403 - and the admin is not served.
+  write returns 403 - and the admin is not served. Its pages do not link to
+  the admin either, so a visitor never meets a dead link.
 - **Samples need no model.** The UI offers the 20 synthetic job
   descriptions; each replays a draft a real model wrote (from the golden
   set) through the live gate. The demo stays useful when the free quota is

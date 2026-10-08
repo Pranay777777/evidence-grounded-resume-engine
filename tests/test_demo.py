@@ -94,6 +94,7 @@ def test_the_demo_is_read_only(site: TestClient) -> None:
     assert site.get("/admin").status_code == 404
     page = site.get("/ui").text
     assert "Public demo." in page and "100/hour per visitor" in page
+    assert "/admin" not in page  # no links to pages the demo does not serve
 
 
 def test_samples_replay_recorded_drafts_without_a_model_call(site: TestClient) -> None:

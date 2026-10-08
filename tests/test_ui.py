@@ -79,6 +79,7 @@ def token(client: TestClient) -> str:
 def test_the_form_renders(ui: TestClient) -> None:
     page = ui.get("/ui")
     assert page.status_code == 200 and 'action="/ui/draft"' in page.text
+    assert 'href="/admin/evidence/new"' in page.text  # locally the admin is linked
 
 
 def test_a_draft_shows_citations_evidence_and_the_diff(ui: TestClient) -> None:

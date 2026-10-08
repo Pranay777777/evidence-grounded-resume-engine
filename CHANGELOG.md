@@ -6,6 +6,18 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-10-08
+
+### Fixed
+- The public demo's page header linked to "Evidence admin" and "+ New record",
+  which the demo does not serve, so both answered `{"detail":"Not Found"}`.
+  In demo mode the header now shows only Draft and API (ADR-020).
+
+### Added
+- `python -m grounded.resume`: a one-page résumé rendered from verified
+  evidence with no model, each project bullet linking to its public proof.
+- A build log: docs/build-log.md.
+
 ## [1.0.2] - 2026-10-01
 
 ### Fixed

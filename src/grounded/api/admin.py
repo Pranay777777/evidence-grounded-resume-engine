@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from grounded.api import csrf
 from grounded.api.deps import get_session
+from grounded.config import get_settings
 from grounded.evidence.enums import EvidenceKind, VerificationMethod, VerificationStatus
 from grounded.evidence.models import Evidence, Project, Role
 from grounded.evidence.schema import EvidenceIn
@@ -27,6 +28,8 @@ from grounded.evidence.store import EvidenceError, reject, upsert_evidence, veri
 
 router = APIRouter(prefix="/admin")
 templates = Jinja2Templates(directory=str(files("grounded") / "api" / "templates"))
+# The public demo serves no admin (ADR-020), so its pages must not link to it.
+templates.env.globals["is_demo"] = lambda: get_settings().demo
 SessionDep = Annotated[Session, Depends(get_session)]
 Text = Annotated[str, Form()]
 OptionalText = Annotated[str, Form()]
