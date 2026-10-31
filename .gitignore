@@ -77,3 +77,6 @@ evidence/private/
 
 # Downloaded embedding and reranking models (ADR-004)
 .cache/
+
+# graphify knowledge graph (local only)
+graphify-out/
